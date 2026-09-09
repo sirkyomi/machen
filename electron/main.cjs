@@ -56,9 +56,9 @@ function broadcast() {
 function windowFor(isQuick = false) {
   const w = new BrowserWindow({
     width: isQuick ? 600 : 1180,
-    height: isQuick ? 92 : 820,
+    height: isQuick ? 56 : 820,
     minWidth: isQuick ? 500 : 700,
-    minHeight: isQuick ? 92 : 540,
+    minHeight: isQuick ? 56 : 540,
     show: false,
     title: isQuick ? tr("Aufgabe erfassen") : 'Machen',
     roundedCorners: true,
@@ -164,6 +164,9 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       if(!app.isPackaged || process.env.MACHEN_TEST_HOME)throw Error('Development build');
       return new UpdateManager(new GithubSource(REPOSITORY, undefined, false), {AllowVersionDowngrade:false, ExplicitChannel: `${process.platform==='win32'?'win':process.platform==='darwin'?'osx':'linux'}-${process.arch}`});
     }, notify:next=>main.webContents.send('app:update',next), quit:()=>app.quit()});
+    // Check asynchronously after startup, then periodically; downloading stays manual.
+    const initialUpdateCheck=setTimeout(()=>updates.check(),0);initialUpdateCheck.unref();
+    const periodicUpdateCheck=setInterval(()=>updates.check(),4*60*60*1000);periodicUpdateCheck.unref();
     ipcMain.handle('app:call', async (event, action, data = {}) => {
       if (![main.webContents, quick.webContents].includes(event.sender)) throw Error(tr("Unzulässiger Zugriff."));
       if(action.startsWith('update:')){
@@ -229,7 +232,7 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       if(action==='quickExpanded'){
         if(event.sender!==quick.webContents||typeof data.expanded!=='boolean')throw Error(tr('Unzulässiger Zugriff.'));
         const area=screen.getDisplayMatching(quick.getBounds()).workArea;
-        const compactHeight=92;
+        const compactHeight=56;
         const requested=Number.isInteger(data.height)?data.height:510;
         const height=data.expanded?Math.min(Math.max(requested,compactHeight),Math.max(compactHeight,area.height-24)):compactHeight;
         const [x,y]=quick.getPosition();

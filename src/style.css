@@ -20,7 +20,7 @@
 
 .quick-window{background:var(--paper);color:var(--ink)}
 
-.quick-window .quick{padding:22px 24px;border:1px solid var(--line);min-height:100vh}
+.quick-window .quick{padding:22px 24px;border:0;min-height:100vh}
 
 .quick-window label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}
 
@@ -162,16 +162,16 @@
 .settings>.language-picker{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;margin:24px 0 34px}
 .settings>.language-picker select{width:220px;padding:10px 12px;font-size:14px}
 .settings>.language-picker>span{font-size:12px}
-.quick-window .quick{padding:16px 18px;min-height:0;max-height:100vh;overflow:auto;scrollbar-width:none}
+.quick-window{background:var(--white)}
+.quick-window .quick{padding:0;min-height:0;max-height:100vh;overflow:auto;scrollbar-width:none;background:var(--white);border-radius:0}
 .quick-window .quick::-webkit-scrollbar{display:none}
-.quick-window .composer{margin:0;padding:0;background:transparent;border:0;box-shadow:none}
-.quick-window .composer-line{border:1px solid var(--line);background:var(--white);border-radius:10px;padding:5px 6px}
-.quick-window .composer-line:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--focus-wash)}
+.quick-window .composer{margin:0;padding:0;background:var(--white);border:0;border-radius:0;box-shadow:none}
+.quick-window .composer-line{min-height:56px;border:0;background:transparent;border-radius:0;padding:5px 10px}
 .quick-window .composer-line input{width:auto;background:transparent;font-size:15px;padding:10px 2px}
 .quick-window .composer-line input:focus-visible{outline:none}
 .quick-window .expand-composer{padding:7px}
 .quick-window .composer-line .primary{font-size:12px;padding:8px 12px}
-.quick-window #composer-details{margin:16px 0 0;padding:0;border:0}
+.quick-window #composer-details{margin:0;padding:10px 12px 14px;border-top:1px solid var(--line)}
 .quick-window #composer-details textarea{min-height:85px}
 .quick-window .project-options{max-height:150px}
 .control-wrapper{position:relative;display:block;min-width:0}
@@ -208,5 +208,3 @@
 @media(max-width:650px){.sidebar .language-picker .control-wrapper{min-width:0;width:48px}.sidebar .custom-control{padding:6px;gap:2px}.sidebar .custom-control svg{width:10px}}
 [data-update-settings]{padding-bottom:24px;border-bottom:1px solid var(--border);margin-bottom:28px}
 .sidebar .update-notice{color:var(--accent);font-size:12px}
-
-.quick-window .quick{background:var(--paper);border-radius:14px;overflow:auto}

@@ -139,8 +139,9 @@ Die Versionslogik steht in `scripts/release-version.cjs`. Die Queue verwendet di
 
 ## Updates in der App
 
-Unter Einstellungen lassen sich stabile GitHub-Releases manuell prüfen. Download und
-Installation benötigen einen Klick; vor dem
+Beim Start und danach alle vier Stunden prüft Machen auf stabile GitHub-Releases.
+Unter Einstellungen lässt sich zusätzlich manuell prüfen. Download und Installation
+benötigen einen Klick; vor dem
 Neustart warnt ein App-Dialog vor nicht gespeicherten Eingaben in beiden Fenstern.
 Ein heruntergeladenes Update bleibt bis zur ausdrücklichen Installation bereit.
 Entwicklungsstarts und reine Electron-Paketordner ohne Velopack unterstützen keine Updates.

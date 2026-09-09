@@ -14,8 +14,13 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),os=
   await page.locator('#jump-date').fill(dates.tomorrow);await page.locator('#jump-date').dispatchEvent('change');await page.locator('.task-title').filter({hasText:'Only tomorrow'}).waitFor();
   const task=(await page.evaluate(()=>window.api.call('state'))).tasks[0];assert.equal(task.created,dates.today);assert.equal(task.scheduled,dates.tomorrow);
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
-  await quick.locator('.quick').waitFor();assert.equal(await quick.locator('.quick').evaluate(el=>getComputedStyle(el).borderRadius),'14px');
-  assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds().height),92);
+  await quick.locator('.quick').waitFor();
+  const edge=await quick.locator('#quick-form').evaluate(el=>{const box=el.getBoundingClientRect();return {left:box.left,top:box.top,right:box.right,width:innerWidth};});
+  assert.equal(edge.left,0);assert.equal(edge.top,0);assert.equal(edge.right,edge.width);
+  assert.equal(await quick.locator('.quick .composer-line').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
+  assert.equal(await quick.locator('#quick-form').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
+  assert.equal(await quick.locator('.quick').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
+  assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds().height),56);
   assert.equal(await quick.locator('.quick').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
   fs.mkdirSync('test-results',{recursive:true});await quick.screenshot({path:'test-results/rounded-quick.png',omitBackground:true});
   console.log('PASS tomorrow planning, today exclusion/count, actual creation date and rounded transparent popup');

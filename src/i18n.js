@@ -4,7 +4,7 @@
   'Updates':'Updates',
   'Updates sind in diesem Build nicht verfügbar. Bitte den Installer verwenden.':'Updates are unavailable in this build. Please use the installer.',
   'Beim Start wird automatisch nach Updates gesucht.':'Updates are checked automatically at startup.',
-  'Prüfe Updates bei Bedarf über den Button.':'Check for updates when you need to.',
+  'Beim Start und danach alle vier Stunden wird nach Updates gesucht.':'Updates are checked at startup and every four hours.',
   'Updates werden gesucht …':'Checking for updates …',
   'Machen ist aktuell.':'Machen is up to date.',
   'Eine neue Version ist verfügbar.':'A new version is available.',

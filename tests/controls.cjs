@@ -16,11 +16,12 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/modern-settings.png'});
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
   const bounds=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds());
-  const small=await bounds();assert.equal(small.height,92);await quick.getByRole('textbox',{name:'New task',exact:true}).fill('Capture with details');
+  const small=await bounds();assert.equal(small.height,56);await quick.getByRole('textbox',{name:'New task',exact:true}).fill('Capture with details');
   await quick.getByRole('button',{name:'Expand task details'}).click();assert.ok((await bounds()).height>small.height+200);assert.ok((await bounds()).height<510);
   await quick.locator('#create-entry').focus();
   const projectEntryStyle=await quick.locator('#create-entry').locator('..').evaluate(el=>({border:getComputedStyle(el).borderColor,shadow:getComputedStyle(el).boxShadow,buttonWidth:el.querySelector('button').getBoundingClientRect().width,inputOutline:getComputedStyle(el.querySelector('input')).outlineStyle}));
   assert.notEqual(projectEntryStyle.shadow,'none');assert.equal(projectEntryStyle.buttonWidth,42);assert.equal(projectEntryStyle.inputOutline,'none');
+  assert.equal(await quick.locator('#quick-form').evaluate(el=>getComputedStyle(el).boxShadow),'none');
   await quick.locator('#create-entry').fill('Wor');await quick.getByRole('option',{name:'Work',exact:true}).click();
   assert.ok((await bounds()).height>=await quick.locator('.quick').evaluate(el=>el.scrollHeight));
   await quick.locator('#create-context-entry').fill('NewContext');await quick.locator('#create-context-entry').press('Enter');
