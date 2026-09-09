@@ -1,0 +1,51 @@
+const {_electron:electron}=require('playwright');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+
+(async()=>{
+  const home=fs.mkdtempSync(path.join(os.tmpdir(),'machen-qol-')),dir=path.join(home,'data');fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(home,'settings.json'),JSON.stringify({directory:dir,language:'en',theme:'dark',shortcut:'Alt+Shift+F4'}));
+  fs.writeFileSync(path.join(dir,'todo.txt'),'2026-09-09 Work task +Work @Office id:one\n2026-09-09 Personal task +Home @Phone id:two\n');
+  let app;
+  try{
+    app=await electron.launch({args:['.'],env:{...process.env,MACHEN_TEST_HOME:home}});
+    const page=await app.firstWindow();
+    await page.locator('[data-project="Work"]').click();
+    await page.getByRole('heading',{name:'Work',exact:true}).waitFor();
+    await page.getByRole('textbox',{name:'New task',exact:true}).fill('Project note');
+    await page.getByRole('button',{name:'Add',exact:true}).click();
+    const created=(await page.evaluate(()=>window.api.call('state'))).tasks.find(task=>task.title.startsWith('Project note'));
+    assert.match(created.title,/\+Work/);
+    await page.locator('[data-context="Office"]').click();
+    await page.getByRole('heading',{name:'@Office',exact:true}).waitFor();
+    assert.equal(await page.locator('.task-title').count(),1);
+    await page.getByRole('textbox',{name:'New task',exact:true}).fill('Context note');
+    await page.getByRole('button',{name:'Add',exact:true}).click();
+    const contextTask=(await page.evaluate(()=>window.api.call('state'))).tasks.find(task=>task.title.startsWith('Context note'));
+    assert.match(contextTask.title,/@Office/);
+    const lists=await page.locator('.sidebar-list').evaluateAll(items=>items.map(item=>({overflow:getComputedStyle(item.querySelector('.sidebar-list-items')).overflowY,flex:getComputedStyle(item).flexGrow})));
+    assert.deepEqual(lists,[{overflow:'auto',flex:'1'},{overflow:'auto',flex:'1'}]);
+    await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:'Change shortcut',exact:true}).click();
+    await page.getByText('Press the shortcut you want to use.',{exact:true}).waitFor();
+    await page.keyboard.press('Control+Alt+K');
+    assert.equal(await page.locator('#shortcut').inputValue(),'CommandOrControl+Alt+K');
+    await page.getByRole('button',{name:'Save settings',exact:true}).click();
+    assert.equal((await page.evaluate(()=>window.api.call('state'))).settings.shortcut,'CommandOrControl+Alt+K');
+    assert.equal(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('CommandOrControl+Alt+K')),true);
+    await page.locator('input[name=showProjects]').uncheck();
+    await page.getByRole('button',{name:'Save settings',exact:true}).click();
+    assert.equal((await page.evaluate(()=>window.api.call('state'))).settings.showProjects,false);
+    await page.locator('[data-view="today"]').click();
+    assert.equal(await page.locator('.sidebar-list').count(),1);
+    assert.equal(await page.locator('[data-context="Office"]').count(),1);
+    await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.locator('input[name=showProjects]').check();
+    await page.locator('input[name=showContexts]').uncheck();
+    await page.getByRole('button',{name:'Save settings',exact:true}).click();
+    assert.equal((await page.evaluate(()=>window.api.call('state'))).settings.showContexts,false);
+    await page.locator('[data-view="today"]').click();
+    assert.equal(await page.locator('.sidebar-list').count(),1);
+    assert.equal(await page.locator('[data-project="Work"]').count(),1);
+    console.log('PASS project creation defaults, split context navigation and shortcut recording');
+  }finally{if(app)await app.close();fs.rmSync(home,{recursive:true,force:true});}
+})().catch(error=>{console.error(error);process.exitCode=1;});

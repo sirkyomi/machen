@@ -39,6 +39,8 @@ const defaults = {
   directory: '',
   shortcut: 'CommandOrControl+Shift+Space',
   autoStart: false,
+  showProjects: true,
+  showContexts: true,
   theme: 'system',
   language: 'de'
 };
@@ -219,6 +221,8 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         settings.shortcut = data.shortcut;
         shortcutError = '';
         settings.autoStart = !!data.autoStart;
+        settings.showProjects = !!data.showProjects;
+        settings.showContexts = !!data.showContexts;
         if (process.platform !== 'linux') app.setLoginItemSettings({
           openAtLogin: settings.autoStart
         });

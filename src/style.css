@@ -215,3 +215,14 @@
 @media(max-width:650px){.sidebar .language-picker .control-wrapper{min-width:0;width:48px}.sidebar .custom-control{padding:6px;gap:2px}.sidebar .custom-control svg{width:10px}}
 [data-update-settings]{padding-bottom:24px;border-bottom:1px solid var(--border);margin-bottom:28px}
 .sidebar .update-notice{color:var(--accent);font-size:12px}
+.sidebar-lists{display:flex;flex:1;min-height:0;flex-direction:column;gap:18px;padding-top:28px}
+.sidebar-list{display:flex;flex:1 1 0;min-height:0;flex-direction:column}
+.sidebar-list .projects{margin:0 12px 8px;flex-shrink:0}
+.sidebar-list-items{overflow-y:auto;scrollbar-width:thin;padding-right:2px}
+.sidebar-list-items::-webkit-scrollbar{width:5px}.sidebar-list-items::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+.sidebar-list-items .project{display:block;width:100%}
+.sidebar-list-items .context-chip{background:color-mix(in srgb,var(--accent) 10%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line));color:var(--ink)}
+.sidebar .bottom{margin-top:0}
+.shortcut-recorder{display:flex;gap:8px;align-items:center}.shortcut-recorder input{flex:1}.shortcut-recorder button{flex-shrink:0}.shortcut-recorder button[aria-pressed=true]{background:var(--selected);color:var(--accent)}
+.settings .checklabel+.checklabel{margin-top:10px}
+@media(max-width:650px){.sidebar-lists{display:none}.shortcut-recorder{align-items:stretch;flex-direction:column}.shortcut-recorder button{width:100%}}

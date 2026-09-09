@@ -13,7 +13,7 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),pat
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
   assert.equal(await page.locator('#notes').inputValue(),'Nicht übersetzen');
   assert.equal(await page.locator('#detail-title').inputValue(),'Heute');
-  assert.equal(await page.locator('.sidebar .project-chip').textContent(),'Archiv');
+  assert.equal(await page.locator('.sidebar [data-project="Archiv"] .project-chip').textContent(),'Archiv');
   await page.getByRole('button',{name:'Save',exact:true}).click();
   await page.getByRole('button',{name:'Delete',exact:true}).click();
   await page.getByRole('heading',{name:'Delete task?',exact:true}).waitFor();await page.getByRole('button',{name:'Cancel',exact:true}).click();

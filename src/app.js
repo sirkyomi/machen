@@ -20,8 +20,10 @@ let state,
   day = localDay(),
   query = '',
   project = '',
+  context = '',
   toastTimer,
-  dirty = false;
+  dirty = false,
+  recordingShortcut = false;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
 function syncQuickHeight() {
@@ -73,6 +75,14 @@ function brand() {
 function nav(name, label) {
   return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;
 }
+function sidebarList(kind, label, items) {
+  const selectedValue = kind === 'project' ? project : context;
+  const active = kind === 'project' ? view === 'project' : view === 'context';
+  const empty = kind === 'project' ? tr("Noch keine Projekte") : tr("Noch keine Kontexte");
+  const chip = kind === 'project' ? projectChip : contextChip;
+  const attr = kind === 'project' ? 'data-project' : 'data-context';
+  return `<section class="sidebar-list"><p class="projects">${label}</p><div class="sidebar-list-items">${items.length ? items.map(item => `<button class="project ${kind} ${active && selectedValue === item ? 'active' : ''}" ${attr}="${escapeHtml(item)}">${chip(item)}</button>`).join('') : `<small class="project muted">${empty}</small>`}</div></section>`;
+}
 function week() {
   const current = new Date(day + 'T12:00:00');
   const start = new Date(current);
@@ -97,9 +107,12 @@ function group(title, tasks, empty = '') {
   if (!tasks.length && !empty) return '';
   return `<section class="group"><div class="group-header"><h2>${title}</h2><span>${tasks.length}</span></div>${tasks.length ? tasks.map(row).join('') : empty ? `<p class="empty">${empty}</p>` : ''}</section>`;
 }
+function settingsContent() {
+  return `<div class="settings"><h1>${tr("Einstellungen")}</h1>${languagePicker()}<section data-update-settings>${updateControls()}</section><h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><form id="settings-form"><h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p><h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p><label class="checklabel"><input type="checkbox" name="showProjects" ${state.settings.showProjects ? 'checked' : ''}>${tr("Projekte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="showContexts" ${state.settings.showContexts ? 'checked' : ''}>${tr("Kontexte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label><button class="primary" type="submit">${tr("Einstellungen speichern")}</button></form><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button data-action="quit">${tr("Machen beenden")}</button></div>`;
+}
 function content() {
-  if (view === 'settings') return `<div class="settings"><h1>${tr("Einstellungen")}</h1>${languagePicker()}<section data-update-settings>${updateControls()}</section><h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><form id="settings-form"><h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" required><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")}</p><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label><button class="primary" type="submit">${tr("Einstellungen speichern")}</button></form><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button data-action="quit">${tr("Machen beenden")}</button></div>`;
-  const title = view === 'archive' ? tr("Archiv") : view === 'history' ? tr("Verlauf") : view === 'all' ? tr("Alle Aufgaben") : view === 'project' ? project : day === localDay() ? tr("Heute") : dateLabel(day);
+  if (view === 'settings') return settingsContent();
+  const title = view === 'archive' ? tr("Archiv") : view === 'history' ? tr("Verlauf") : view === 'all' ? tr("Alle Aufgaben") : view === 'project' ? project : view === 'context' ? '@' + context : day === localDay() ? tr("Heute") : dateLabel(day);
   let html = `<div class="topline"><h1>${escapeHtml(title)}</h1><button class="icon" data-action="search" aria-label="${tr("Aufgaben durchsuchen")}">${icon('search')}</button></div><p class="date-caption">${view === 'today' ? new Date(day + 'T12:00:00').toLocaleDateString(locale(), {
     weekday: 'long',
     day: 'numeric',
@@ -144,7 +157,7 @@ function content() {
   html += filterBar();
   if (view !== 'archive') html += createComposer();
   if (view !== 'archive' && state.tasks.some(t => t.done)) html += '<div class="archive-actions"><button data-action="archiveCompleted">' + icon('archive') + ` ${tr("Alle erledigten archivieren")}</button></div>`;
-  let tasks = (view === 'archive' ? state.archived || [] : state.tasks).filter(t => searchMatches(t) && matchesFilters(t) && (!project || view !== 'project' || taskProjects(t.title).includes(project))).sort((a, b) => (a.priority || 'Z').localeCompare(b.priority || 'Z') || b.created.localeCompare(a.created));
+  let tasks = (view === 'archive' ? state.archived || [] : state.tasks).filter(t => searchMatches(t) && matchesFilters(t) && (!project || view !== 'project' || taskProjects(t.title).includes(project)) && (!context || view !== 'context' || taskContexts(t.title).includes(context))).sort((a, b) => (a.priority || 'Z').localeCompare(b.priority || 'Z') || b.created.localeCompare(a.created));
   if (view === 'archive') return html + group(tr("Archivierte Aufgaben"), tasks, hasFilters() ? tr("Keine archivierten Aufgaben passen zu den Filtern.") : tr("Noch keine archivierten Aufgaben."));
   if (!tasks.length && hasFilters()) return html + `<p class="empty">${tr("Keine Aufgaben passen zu diesen Filtern.")}</p>`;
   if (view === 'today') {
@@ -183,8 +196,8 @@ function render() {
     paintUpdates();
     return;
   }
-  const projects = allProjects();
-  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<p class="projects">${tr("Projekte")}</p>${projects.length ? projects.map(p => `<button class="project ${project === p && view === 'project' ? 'active' : ''}" data-project="${escapeHtml(p)}">${projectChip(p)}</button>`).join('') : `<small class="project muted">${tr("Noch keine Projekte")}</small>`}<div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}<button class="update-notice" data-action="updates" data-update-notice hidden></button></div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
+  const projects = allProjects(), contexts = allContexts();
+  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}<button class="update-notice" data-action="updates" data-update-notice hidden></button></div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
   restoreComposer(draft);
   enhanceControls();
   paintUpdates();
@@ -226,13 +239,23 @@ root.addEventListener('click', async e => {
       selected = null;
       query = '';
       project = '';
+      context = '';
       day = localDay();
       render();
     }
     if (b.dataset.project) {
       if (!(await discard())) return;
       project = b.dataset.project;
+      context = '';
       view = 'project';
+      selected = null;
+      render();
+    }
+    if (b.dataset.context) {
+      if (!(await discard())) return;
+      context = b.dataset.context;
+      project = '';
+      view = 'context';
       selected = null;
       render();
     }
@@ -269,7 +292,14 @@ root.addEventListener('click', async e => {
       applyTheme();
     }
     const a = b.dataset.action;
-    if(a==='updates'){if(!(await discard()))return;view='settings';selected=null;render();}
+    if(a==='updates'){if(!(await discard()))return;view='settings';selected=null;project='';context='';render();}
+    else if (a === 'recordShortcut') {
+      recordingShortcut = true;
+      b.setAttribute('aria-pressed', 'true');
+      b.textContent = tr("Tastenkombination drücken");
+      document.querySelector('#shortcut-capture-status').textContent = tr("Drücke die gewünschte Tastenkombination.");
+      document.querySelector('#shortcut')?.focus();
+    }
     else if (a === 'expandComposer') {
       const details = document.querySelector('#composer-details');
       details.hidden = !details.hidden;
@@ -360,6 +390,8 @@ root.addEventListener('submit', async e => {
   try {
     const data = ['composer', 'quick-form', 'detail-form'].includes(form.id) ? taskFormData(form) : Object.fromEntries(new FormData(form));
     if (form.id === 'composer' || form.id === 'quick-form') {
+      if (!quick && view === 'project' && project && !taskProjects(data.title).includes(project)) data.title += ` +${encodeURIComponent(project)}`;
+      if (!quick && view === 'context' && context && !taskContexts(data.title).includes(context)) data.title += ` @${encodeURIComponent(context)}`;
       if (!quick && view === 'today') data.scheduled = day;
       await call('create', data);
       if (quick) {
@@ -393,7 +425,33 @@ root.addEventListener('submit', async e => {
     if (button) button.disabled = false;
   }
 });
+function capturedShortcut(e) {
+  const key = e.code === 'Space' ? 'Space' : /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : /^F\d{1,2}$/.test(e.code) ? e.code : ({ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',Enter:'Enter',Tab:'Tab'}[e.key] || '');
+  if (!key || (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey)) return '';
+  return [...(e.ctrlKey || e.metaKey ? ['CommandOrControl'] : []), ...(e.altKey ? ['Alt'] : []), ...(e.shiftKey ? ['Shift'] : []), key].join('+');
+}
 document.addEventListener('keydown', async e => {
+  if (recordingShortcut) {
+    if (e.key === 'Escape') {
+      recordingShortcut = false;
+      const button = document.querySelector('[data-action=recordShortcut]');
+      button?.setAttribute('aria-pressed', 'false');
+      if (button) button.textContent = tr("Shortcut ändern");
+      document.querySelector('#shortcut-capture-status').textContent = '';
+      return;
+    }
+    const shortcut = capturedShortcut(e);
+    if (!shortcut) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    recordingShortcut = false;
+    document.querySelector('#shortcut').value = shortcut;
+    const button = document.querySelector('[data-action=recordShortcut]');
+    button?.setAttribute('aria-pressed', 'false');
+    if (button) button.textContent = tr("Shortcut ändern");
+    document.querySelector('#shortcut-capture-status').textContent = shortcut;
+    return;
+  }
   if (pendingDialog || e.defaultPrevented) return;
   if (e.key === 'Escape') {
     if (quick) call('hideQuick');else if (selected && (await discard())) {

@@ -87,7 +87,7 @@ function taskFormData(form) {
   return data;
 }
 function createComposer(quickMode = false) {
-  return `<form id="${quickMode?'quick-form':'composer'}" class="composer composer-expandable"><div class="composer-line"><button type="button" class="expand-composer" data-action="expandComposer" aria-label="${tr("Aufgabendetails ausklappen")}" aria-expanded="false" aria-controls="composer-details">${icon('down')}</button><input name="title" aria-label="${tr("Neue Aufgabe")}" placeholder="${tr("Was möchtest du erledigen?")}" required maxlength="2000" autocomplete="off"><button class="primary" type="submit">${tr(quickMode?"Erfassen":"Hinzufügen")}</button></div><div id="composer-details" hidden>${projectPicker('create', view === 'project' ? [project] : [])}${contextPicker('create-context')}<div class="fields"><div><label for="create-priority">${tr("Priorität")}</label><select id="create-priority" name="priority"><option value="">${tr("Keine")}</option>${Array.from({
+  return `<form id="${quickMode?'quick-form':'composer'}" class="composer composer-expandable"><div class="composer-line"><button type="button" class="expand-composer" data-action="expandComposer" aria-label="${tr("Aufgabendetails ausklappen")}" aria-expanded="false" aria-controls="composer-details">${icon('down')}</button><input name="title" aria-label="${tr("Neue Aufgabe")}" placeholder="${tr("Was möchtest du erledigen?")}" required maxlength="2000" autocomplete="off"><button class="primary" type="submit">${tr(quickMode?"Erfassen":"Hinzufügen")}</button></div><div id="composer-details" hidden>${projectPicker('create', view === 'project' ? [project] : [])}${contextPicker('create-context', view === 'context' ? [context] : [])}<div class="fields"><div><label for="create-priority">${tr("Priorität")}</label><select id="create-priority" name="priority"><option value="">${tr("Keine")}</option>${Array.from({
     length: 26
   }, (_, i) => `<option>${String.fromCharCode(65 + i)}</option>`).join('')}</select></div><div><label for="create-due">${tr("Fällig am")}</label><input id="create-due" type="date" name="due"></div></div><label for="create-notes">${tr("Notizen & E-Mail-Kontext")}</label><textarea id="create-notes" name="notes" placeholder="${tr("Optionaler Kontext zur Aufgabe")}"></textarea></div></form>`;
 }
@@ -114,7 +114,7 @@ function resetComposer(form = document.querySelector('#composer')) {
   form.reset();
   setPickedProjects(form.querySelector('.project-picker'), view === 'project' ? [project] : []);
   for (const picker of form.querySelectorAll('.project-picker')) {
-    if (picker.dataset.kind === 'contexts') setPickedProjects(picker, []);
+    if (picker.dataset.kind === 'contexts') setPickedProjects(picker, view === 'context' ? [context] : []);
     updateProjectOptions(picker, false);
   }
   enhanceControls();
