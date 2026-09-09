@@ -1,7 +1,7 @@
 let updateState = null;
 function updateControls() {
   const u=updateState;if(!u)return '';
-  const messages={unavailable:'Updates sind in diesem Build nicht verfügbar. Bitte den Installer verwenden.',idle:'Beim Start wird automatisch nach Updates gesucht.',checking:'Updates werden gesucht …',current:'Machen ist aktuell.',available:'Eine neue Version ist verfügbar.',downloading:'Update wird heruntergeladen …',ready:'Das Update ist bereit. Du kannst jetzt neu starten.',installing:'Update wird installiert …','check-error':'Updates konnten nicht geprüft werden. Bitte später erneut versuchen.','download-error':'Download fehlgeschlagen. Bitte erneut versuchen.'};
+  const messages={unavailable:'Updates sind in diesem Build nicht verfügbar. Bitte den Installer verwenden.',idle:'Prüfe Updates bei Bedarf über den Button.',checking:'Updates werden gesucht …',current:'Machen ist aktuell.',available:'Eine neue Version ist verfügbar.',downloading:'Update wird heruntergeladen …',ready:'Das Update ist bereit. Du kannst jetzt neu starten.',installing:'Update wird installiert …','check-error':'Updates konnten nicht geprüft werden. Bitte später erneut versuchen.','download-error':'Download fehlgeschlagen. Bitte erneut versuchen.'};
   const action=u.status==='ready'?'install':['available','download-error'].includes(u.status)?'download':'check';
   const label={check:'Nach Updates suchen',download:'Update herunterladen',install:'Jetzt neu starten'}[action];
   const disabled=['unavailable','checking','downloading','installing'].includes(u.status);

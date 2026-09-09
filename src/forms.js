@@ -64,6 +64,7 @@ function updateProjectOptions(picker, open = true) {
 function setPickedProjects(picker, chosen) {
   picker.querySelector('input[type=hidden]').value = JSON.stringify(chosen);
   picker.querySelector('.chosen-projects').innerHTML = chosen.map(p => pickerChip(picker, p, true)).join('');
+  window.dispatchEvent(new Event('quick:content-size'));
 }
 function pickProject(picker, name) {
   name = name.trim().replace(/^[+@]/, '');

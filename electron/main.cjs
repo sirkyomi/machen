@@ -56,14 +56,13 @@ function broadcast() {
 function windowFor(isQuick = false) {
   const w = new BrowserWindow({
     width: isQuick ? 600 : 1180,
-    height: isQuick ? 116 : 820,
+    height: isQuick ? 92 : 820,
     minWidth: isQuick ? 500 : 700,
-    minHeight: isQuick ? 116 : 540,
+    minHeight: isQuick ? 92 : 540,
     show: false,
     title: isQuick ? tr("Aufgabe erfassen") : 'Machen',
-    transparent: isQuick,
     roundedCorners: true,
-    backgroundColor: isQuick ? '#00000000' : nativeTheme.shouldUseDarkColors ? '#171c25' : '#FAFBFD',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#171c25' : '#FAFBFD',
     autoHideMenuBar: true,
     resizable: !isQuick,
     minimizable: !isQuick,
@@ -165,8 +164,6 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       if(!app.isPackaged || process.env.MACHEN_TEST_HOME)throw Error('Development build');
       return new UpdateManager(new GithubSource(REPOSITORY, undefined, false), {AllowVersionDowngrade:false, ExplicitChannel: `${process.platform==='win32'?'win':process.platform==='darwin'?'osx':'linux'}-${process.arch}`});
     }, notify:next=>main.webContents.send('app:update',next), quit:()=>app.quit()});
-    const updateTimer=setTimeout(()=>updates.check(),10000);updateTimer.unref();
-    const repeatUpdates=setInterval(()=>updates.check(),6*60*60*1000);repeatUpdates.unref();
     ipcMain.handle('app:call', async (event, action, data = {}) => {
       if (![main.webContents, quick.webContents].includes(event.sender)) throw Error(tr("Unzulässiger Zugriff."));
       if(action.startsWith('update:')){
@@ -232,11 +229,13 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       if(action==='quickExpanded'){
         if(event.sender!==quick.webContents||typeof data.expanded!=='boolean')throw Error(tr('Unzulässiger Zugriff.'));
         const area=screen.getDisplayMatching(quick.getBounds()).workArea;
-        const height=Math.min(data.expanded?620:116,Math.max(116,area.height-24));
+        const compactHeight=92;
+        const requested=Number.isInteger(data.height)?data.height:510;
+        const height=data.expanded?Math.min(Math.max(requested,compactHeight),Math.max(compactHeight,area.height-24)):compactHeight;
         const [x,y]=quick.getPosition();
         // Windows pins a non-resizable window's sizing constraints after growth.
         quick.setResizable(true);
-        quick.setMinimumSize(500,116);
+        quick.setMinimumSize(500,compactHeight);
         quick.setSize(600,height);
         quick.setResizable(false);
         quick.setPosition(Math.max(area.x,Math.min(x,area.x+area.width-600)),Math.max(area.y+12,Math.min(y,area.y+area.height-height-12)));return;

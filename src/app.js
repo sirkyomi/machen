@@ -23,6 +23,12 @@ let state,
   toastTimer,
   dirty = false;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+let quickSizeObserver;
+function syncQuickHeight() {
+  const details = document.querySelector('#composer-details'), surface = document.querySelector('.quick');
+  if (!quick || !details || details.hidden || !surface) return;
+  call('quickExpanded', {expanded: true, height: Math.ceil(surface.scrollHeight)}).catch(() => {});
+}
 function applyTheme() {
   const preference = state?.settings.theme || 'system';
   document.documentElement.dataset.theme = preference === 'system' ? systemTheme.matches ? 'dark' : 'light' : preference;
@@ -162,10 +168,12 @@ function render() {
   const draft = captureComposer();
   if (quick) {
     document.body.classList.add('quick-window');
-    document.documentElement.classList.add('quick-surface');
-    root.innerHTML = `<main class="quick">${createComposer(true)}<footer><span>${tr("Enter zum Erfassen")}</span></footer></main>`;
+    root.innerHTML = `<main class="quick">${createComposer(true)}</main>`;
     restoreComposer(draft);
     enhanceControls();
+    quickSizeObserver?.disconnect();
+    quickSizeObserver = new ResizeObserver(syncQuickHeight);
+    quickSizeObserver.observe(document.querySelector('#composer-details'));
     paintUpdates();
     return;
   }
@@ -266,7 +274,10 @@ root.addEventListener('click', async e => {
       const details = document.querySelector('#composer-details');
       details.hidden = !details.hidden;
       b.setAttribute('aria-expanded', String(!details.hidden));
-      if(quick)await call('quickExpanded',{expanded:!details.hidden});
+      if (quick) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await call('quickExpanded', {expanded: !details.hidden, height: Math.ceil(document.querySelector('.quick').scrollHeight)});
+      }
     } else if (a === 'closePanel') {
       if (!(await discard())) return;
       selected = null;
@@ -397,6 +408,7 @@ window.api.onChange(() => {
 window.api.onFocus(() => {
   if (quick) document.querySelector('input[name=title]')?.focus();else refresh().catch(e => toast(e.message));
 });
+window.addEventListener('quick:content-size', syncQuickHeight);
 let lastToday = localDay();
 setInterval(() => {
   const now = localDay();
