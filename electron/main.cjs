@@ -72,6 +72,7 @@ function windowFor(isQuick = false) {
     hasShadow: true,
     alwaysOnTop: isQuick,
     skipTaskbar: isQuick,
+    icon: path.join(__dirname, '../assets/app.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

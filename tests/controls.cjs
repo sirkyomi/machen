@@ -8,12 +8,13 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
  try{
   app=await electron.launch({...(process.env.MACHEN_EXECUTABLE?{executablePath:process.env.MACHEN_EXECUTABLE,args:[]}:{args:['.']}),env:{...process.env,MACHEN_TEST_HOME:home}});
   await app.firstWindow();let page;for(let i=0;i<100&&!page;i++){page=app.windows().find(w=>w.url().includes('index.html')&&!w.url().includes('quick=1'));if(!page)await new Promise(r=>setTimeout(r,50));}
+  fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/english-today.png'});
   await page.getByRole('button',{name:'Settings',exact:true}).click();
   const language=page.locator('.settings').getByRole('combobox',{name:'Sprache / Language',exact:true});
   await language.click();await page.getByRole('option',{name:'Deutsch',exact:true}).click();
   await page.getByRole('heading',{name:'Einstellungen',exact:true}).waitFor();
   await page.locator('.settings').getByRole('combobox',{name:'Sprache / Language',exact:true}).click();await page.getByRole('option',{name:'English',exact:true}).click();
-  fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/modern-settings.png'});
+  await page.screenshot({path:'test-results/modern-settings.png'});
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
   const bounds=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds());
   const small=await bounds();assert.equal(small.height,56);await quick.getByRole('textbox',{name:'New task',exact:true}).fill('Capture with details');

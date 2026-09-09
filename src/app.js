@@ -68,7 +68,7 @@ async function refresh() {
   if (!dirty && changed && (!quick || !root.children.length)) render();
 }
 function brand() {
-  return `<div class="brand"><span class="mark">${icon('check')}</span><span class="brand-name">Machen</span></div>`;
+  return `<div class="brand" aria-label="Machen"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 24V8l10 10L26 8v9"/><path d="m18 22 3.2 3L28 18"/></svg></span><span class="brand-name">Machen</span></div>`;
 }
 function nav(name, label) {
   return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;

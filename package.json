@@ -23,6 +23,7 @@
     "package": "node scripts/package.cjs",
     "release": "node scripts/release.cjs",
     "check": "node scripts/check.cjs",
+    "brand:assets": "node scripts/brand-assets.cjs",
     "test:ui": "node scripts/test-ui.cjs"
   },
   "dependencies": {
