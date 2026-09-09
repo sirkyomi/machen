@@ -1,0 +1,11 @@
+const {spawnSync}=require('node:child_process');const path=require('node:path');const fs=require('node:fs');
+const pkg=require('../package.json');const platform=process.platform;
+const dir=path.resolve('out',pkg.version,`Machen-${platform}-${process.arch}`);
+const local=path.resolve('.tools',platform==='win32'?'vpk.exe':'vpk');
+const command=fs.existsSync(local)?local:'vpk';
+const packDir=platform==='darwin'?path.join(dir,'Machen.app'):dir;
+const runtime=`${platform==='win32'?'win':platform==='darwin'?'osx':'linux'}-${process.arch}`;
+const args=['pack','--packId','machen','--packTitle','Machen','--packVersion',pkg.version,'--packDir',packDir,'--runtime',runtime,'--channel',runtime,'--outputDir',path.resolve('releases','machen')];
+if(platform==='win32')args.push('--mainExe','Machen.exe');
+if(platform==='linux')args.push('--mainExe','Machen');
+const result=spawnSync(command,args,{stdio:'inherit'});if(result.error)console.error('Velopack CLI fehlt. Siehe README.md.',result.error.message);process.exit(result.status??1);

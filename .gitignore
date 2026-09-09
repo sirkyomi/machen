@@ -1,0 +1,19 @@
+node_modules/
+out/
+releases/
+.tools/
+test-results/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+Desktop.ini
+coverage/
+# Local task data must never be published with the source.
+todo.txt
+done.txt
+*.bak
+.machen.json*
+attachments/

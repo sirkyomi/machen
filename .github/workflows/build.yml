@@ -1,0 +1,88 @@
+name: Desktop packages
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+concurrency:
+  group: machen-release
+  queue: max
+permissions:
+  contents: read
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: version
+        run: node scripts/release-version.cjs
+  package:
+    needs: version
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: npm ci
+      - name: Set shared release version
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        shell: bash
+        run: npm version "$RELEASE_VERSION" --no-git-tag-version
+      - run: npm run check
+      - run: npm test
+      - run: dotnet tool install vpk --tool-path .tools --version 1.2.110-ge826545
+      - run: npm run package
+      - run: npm run release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Machen-${{ runner.os }}-${{ runner.arch }}
+          path: releases/machen/*
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Machen-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          RELEASE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Make all platforms available together, after every upload succeeds.
+          if gh release view "$RELEASE_TAG" --json isDraft > release-state.json; then
+            node -e "if (!require('./release-state.json').isDraft) throw Error('Release is already published; use a new version')"
+          else
+            gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --draft --title "Machen $RELEASE_TAG" --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          gh release edit "$RELEASE_TAG" --draft=false

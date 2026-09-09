@@ -1,0 +1,43 @@
+const {_electron:electron}=require('playwright');const fs=require('node:fs'),path=require('node:path'),os=require('node:os');const assert=require('node:assert/strict');
+(async()=>{
+ const home=fs.mkdtempSync(path.join(os.tmpdir(),'machen-test-'));const dir=path.join(home,'data');fs.mkdirSync(dir);
+ fs.writeFileSync(path.join(home,'settings.json'),JSON.stringify({directory:dir,shortcut:'Alt+Shift+F10',theme:'dark'}));
+ fs.writeFileSync(path.join(dir,'todo.txt'),'2026-09-08 Bestehende Aufgabe +Arbeit id:existing\n');
+ let app;try{
+ app=await electron.launch({...(process.env.MACHEN_EXECUTABLE?{executablePath:process.env.MACHEN_EXECUTABLE,args:[]}:{args:['.']}),env:{...process.env,MACHEN_TEST_HOME:home}});const page=await app.firstWindow();
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>{errors.push('Unexpected system dialog: '+d.message());await d.dismiss();});
+ await page.getByText('Machen',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Aufgabendetails ausklappen'}).click();
+ await page.getByRole('textbox',{name:'Neue Aufgabe',exact:true}).fill('Entwurf abstimmen');
+ const combo=page.locator('#create-entry');await combo.fill('Arb');
+ await page.locator('#create-options').getByRole('option',{name:'Arbeit',exact:true}).click();
+ await combo.fill('Studio Nord');await combo.press('Enter');
+ await page.locator('#create-priority').selectOption('A');await page.locator('#create-due').fill('2026-10-01');await page.locator('#create-notes').fill('Briefing aus der E-Mail.');
+ await page.getByRole('button',{name:'Hinzufügen',exact:true}).click();
+ await page.locator('.task-title').filter({hasText:'Entwurf abstimmen'}).waitFor();
+ assert.equal(await page.locator('.task-title').filter({hasText:'Entwurf abstimmen'}).textContent(),'Entwurf abstimmen');
+ assert.equal(await page.locator('.sidebar .project-chip').filter({hasText:'Studio Nord'}).count(),1);
+ let data=await page.evaluate(()=>window.api.call('state'));let task=data.tasks.find(t=>t.title.startsWith('Entwurf'));
+ assert.equal(task.priority,'A');assert.equal(task.due,'2026-10-01');assert.equal(task.notes,'Briefing aus der E-Mail.');assert.match(task.title,/\+Studio%20Nord/);
+ await page.locator('.task-title').filter({hasText:'Entwurf abstimmen'}).click();
+ assert.equal(await page.locator('#detail-title').inputValue(),'Entwurf abstimmen');
+ assert.equal(await page.locator('#detail-form .chosen-projects .project-chip').count(),2);
+ await page.locator('#detail-form').getByRole('button',{name:'Projekt Arbeit entfernen'}).click();
+ await page.getByRole('button',{name:'Speichern',exact:true}).click();
+ await page.getByRole('button',{name:'Löschen',exact:true}).click();
+ await page.getByRole('dialog').waitFor();await page.getByRole('dialog').getByRole('button',{name:'Abbrechen'}).click();
+ assert.ok((await page.evaluate(()=>window.api.call('state'))).tasks.some(t=>t.id===task.id));
+ await page.getByRole('button',{name:'Löschen',exact:true}).click();
+ fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/machen-delete.png'});
+ await page.getByRole('dialog').getByRole('button',{name:'Löschen',exact:true}).click();
+ await page.getByRole('dialog').waitFor({state:'detached'});
+ await page.getByRole('textbox',{name:'Neue Aufgabe',exact:true}).fill('Nach dem Löschen');
+ await page.getByRole('button',{name:'Hinzufügen',exact:true}).click();
+ await page.locator('.task-title').filter({hasText:'Nach dem Löschen'}).waitFor();
+ await page.getByRole('textbox',{name:'Neue Aufgabe',exact:true}).fill('Noch ein Entwurf');
+ await combo.fill('Privat');await combo.press('Enter');
+ await page.screenshot({path:'test-results/machen-compose.png'});
+ assert.equal(errors.length,0,errors.join('\n'));
+ console.log('PASS Machen name, expandable create, select/create/remove projects, chips, metadata, in-app delete/cancel, create after deletion');
+ }finally{if(app)await app.close();fs.rmSync(home,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});
