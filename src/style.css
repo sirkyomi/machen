@@ -120,9 +120,11 @@
 #composer-details .fields input,#composer-details select{width:100%;background:var(--paper);padding:10px 12px}
 #composer-details textarea{min-height:88px;background:var(--paper)}
 .project-picker{position:relative;margin-top:12px;min-width:0}
-.project-entry{display:flex;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:7px}
+.project-entry{display:flex;align-items:stretch;background:var(--paper);border:1px solid var(--line);border-radius:7px}
+.project-entry:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--focus-wash)}
 .project-entry input[role=combobox]{width:100%;border:0;background:transparent;font-size:13px;padding:10px 12px}
-.project-entry>button{display:flex;padding:8px}
+.project-entry input[role=combobox]:focus-visible,.project-entry>button:focus-visible{outline:0}
+.project-entry>button{display:flex;align-items:center;justify-content:center;width:42px;flex:0 0 42px;padding:0;border-left:1px solid var(--line);border-radius:0 6px 6px 0}
 .project-entry svg{width:16px;height:16px}
 .project-options{position:absolute;top:100%;left:0;right:0;z-index:8;border:1px solid var(--line);background:var(--white);box-shadow:0 8px 25px var(--shadow);border-radius:8px;padding:5px;max-height:210px;overflow:auto;margin-top:4px}
 .project-options[hidden]{display:none}
