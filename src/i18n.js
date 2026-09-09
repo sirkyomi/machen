@@ -1,5 +1,6 @@
 (function(root){
  const en={
+  'Für diesen Tag':'For this day',
   'Updates':'Updates',
   'Updates sind in diesem Build nicht verfügbar. Bitte den Installer verwenden.':'Updates are unavailable in this build. Please use the installer.',
   'Beim Start wird automatisch nach Updates gesucht.':'Updates are checked automatically at startup.',

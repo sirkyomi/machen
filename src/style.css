@@ -206,3 +206,6 @@
 @media(max-width:650px){.sidebar .language-picker .control-wrapper{min-width:0;width:48px}.sidebar .custom-control{padding:6px;gap:2px}.sidebar .custom-control svg{width:10px}}
 [data-update-settings]{padding-bottom:24px;border-bottom:1px solid var(--border);margin-bottom:28px}
 .sidebar .update-notice{color:var(--accent);font-size:12px}
+
+html.quick-surface,body.quick-window{background:transparent}
+.quick-window .quick{background:var(--paper);border-radius:20px;overflow:auto;clip-path:inset(0 round 20px)}

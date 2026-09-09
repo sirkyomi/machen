@@ -65,7 +65,7 @@ function brand() {
   return `<div class="brand"><span class="mark">${icon('check')}</span><span class="brand-name">Machen</span></div>`;
 }
 function nav(name, label) {
-  return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done).length}</span>` : ''}</button>`;
+  return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;
 }
 function week() {
   const current = new Date(day + 'T12:00:00');
@@ -142,8 +142,8 @@ function content() {
   if (view === 'archive') return html + group(tr("Archivierte Aufgaben"), tasks, hasFilters() ? tr("Keine archivierten Aufgaben passen zu den Filtern.") : tr("Noch keine archivierten Aufgaben."));
   if (!tasks.length && hasFilters()) return html + `<p class="empty">${tr("Keine Aufgaben passen zu diesen Filtern.")}</p>`;
   if (view === 'today') {
-    html += group(tr("Offen von vorher"), tasks.filter(t => !t.done && (!t.created || t.created < day)));
-    html += group(day === localDay() ? tr("Für heute") : tr("An diesem Tag hinzugefügt"), tasks.filter(t => !t.done && t.created === day), tr("Noch nichts auf dem Zettel. Erfasse deine erste Aufgabe oben."));
+    html += group(tr("Offen von vorher"), tasks.filter(t => !t.done && (!(t.scheduled || t.created) || (t.scheduled || t.created) < day)));
+    html += group(day === localDay() ? tr("Für heute") : tr("Für diesen Tag"), tasks.filter(t => !t.done && (t.scheduled || t.created) === day), tr("Noch nichts auf dem Zettel. Erfasse deine erste Aufgabe oben."));
     html += group(tr("Erledigt"), tasks.filter(t => t.done && t.completed === day));
   } else {
     html += group(tr("Offen"), tasks.filter(t => !t.done), tr("Keine offenen Aufgaben.")) + group(tr("Erledigt"), tasks.filter(t => t.done));
@@ -162,6 +162,7 @@ function render() {
   const draft = captureComposer();
   if (quick) {
     document.body.classList.add('quick-window');
+    document.documentElement.classList.add('quick-surface');
     root.innerHTML = `<main class="quick">${createComposer(true)}<footer><span>${tr("Enter zum Erfassen")}</span></footer></main>`;
     restoreComposer(draft);
     enhanceControls();
@@ -348,6 +349,7 @@ root.addEventListener('submit', async e => {
   try {
     const data = ['composer', 'quick-form', 'detail-form'].includes(form.id) ? taskFormData(form) : Object.fromEntries(new FormData(form));
     if (form.id === 'composer' || form.id === 'quick-form') {
+      if (!quick && view === 'today') data.scheduled = day;
       await call('create', data);
       if (quick) {
         resetComposer(form);

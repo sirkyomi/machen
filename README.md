@@ -175,3 +175,12 @@ validated locally; macOS and Linux still require platform testing.
 
 [MIT](LICENSE). Hinweise zu mitgelieferten Drittanbieter-Assets stehen in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Geplante Tage
+
+In der Tagesansicht neu angelegte Aufgaben werden dem ausgewählten Tag zugeordnet.
+Für morgen geplante Aufgaben erscheinen erst morgen in der Tagesliste; offene Aufgaben
+bleiben danach als Übertrag sichtbar. In „Alle Aufgaben“ sind auch zukünftige Aufgaben
+zu sehen. Der Planungstag wird als `t:YYYY-MM-DD` in todo.txt gespeichert; Erstellungsdatum
+und Ereignisverlauf behalten den tatsächlichen Erfassungszeitpunkt. Fälligkeit (`due:`)
+ist unabhängig davon. Die globale Schnellerfassung legt Aufgaben standardmäßig für heute an.

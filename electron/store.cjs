@@ -11,13 +11,14 @@ function parse(line) {
   if (datePattern.test(rest.slice(0,10))) { created = rest.slice(0,10); rest = rest.slice(11); }
   const id = rest.match(/(?:^| )id:([^\s]+)/)?.[1] || randomUUID();
   const due = rest.match(/(?:^| )due:(\d{4}-\d{2}-\d{2})(?= |$)/)?.[1] || '';
+  const scheduled = rest.match(/(?:^| )t:(\d{4}-\d{2}-\d{2})(?= |$)/)?.[1] || '';
   const previousPriority = rest.match(/(?:^| )pri:([A-Z])(?= |$)/)?.[1] || '';
-  const title = rest.replace(/(?:^| )id:[^\s]+/g,'').replace(/(?:^| )due:\d{4}-\d{2}-\d{2}(?= |$)/g,'').replace(/(?:^| )pri:[A-Z](?= |$)/g,'').trim();
-  return { id, title, done, completed, created, priority: priority || previousPriority, due };
+  const title = rest.replace(/(?:^| )t:\d{4}-\d{2}-\d{2}(?= |$)/g,'').replace(/(?:^| )id:[^\s]+/g,'').replace(/(?:^| )due:\d{4}-\d{2}-\d{2}(?= |$)/g,'').replace(/(?:^| )pri:[A-Z](?= |$)/g,'').trim();
+  return { id, title, done, completed, created, priority: priority || previousPriority, due, scheduled };
 }
 function serialize(t) {
   return [t.done ? 'x' : '', t.done ? t.completed : t.priority ? `(${t.priority})` : '', t.created,
-    t.title, t.due ? `due:${t.due}` : '', t.done && t.priority ? `pri:${t.priority}` : '', `id:${t.id}`].filter(Boolean).join(' ');
+    t.title, t.scheduled ? `t:${t.scheduled}` : '', t.due ? `due:${t.due}` : '', t.done && t.priority ? `pri:${t.priority}` : '', `id:${t.id}`].filter(Boolean).join(' ');
 }
 function atomic(file, text) { const temp = `${file}.${randomUUID()}.tmp`; fs.writeFileSync(temp,text,'utf8'); fs.renameSync(temp,file); }
 class Store {
@@ -66,10 +67,12 @@ class Store {
         if(done.length)this.commit();return this.snapshot();
       }
       let t = [...this.tasks,...this.archived].find(t=>t.id===data.id);
-      if (action === 'create') { t = {id:randomUUID(),title:'',created:today(),completed:'',done:false,priority:'',due:''}; this.tasks.push(t); }
+      if (action === 'create') {
+        if(data.scheduled && (!datePattern.test(data.scheduled) || Number.isNaN(Date.parse(data.scheduled+'T12:00:00Z')) || new Date(data.scheduled+'T12:00:00Z').toISOString().slice(0,10)!==data.scheduled)) throw Error('Ungültiges Datum.');
+        t = {id:randomUUID(),title:'',created:today(),completed:'',done:false,priority:'',due:'',scheduled:data.scheduled||''}; this.tasks.push(t); }
       if (!t) throw Error('Aufgabe nicht mehr vorhanden.');
       if (action === 'create' || action === 'edit') {
-        if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 2000 || /[\r\n]/.test(data.title) || /(?:^|\s)(?:id|due|pri):/.test(data.title)) throw Error('Bitte einen Titel ohne reservierte id:, due: oder pri:-Felder eingeben.');
+        if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 2000 || /[\r\n]/.test(data.title) || /(?:^|\s)(?:id|due|pri|t):/.test(data.title)) throw Error('Bitte einen Titel ohne reservierte id:, due: oder pri:-Felder eingeben.');
         if (data.priority && !/^[A-Z]$/.test(data.priority)) throw Error('Ungültige Priorität.');
         if (data.due && !datePattern.test(data.due)) throw Error('Ungültiges Datum.');
         Object.assign(t,{title:data.title.trim(),priority:data.priority||'',due:data.due||''});
