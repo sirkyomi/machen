@@ -56,9 +56,9 @@ function broadcast() {
 function windowFor(isQuick = false) {
   const w = new BrowserWindow({
     width: isQuick ? 600 : 1180,
-    height: isQuick ? 154 : 820,
+    height: isQuick ? 116 : 820,
     minWidth: isQuick ? 500 : 700,
-    minHeight: isQuick ? 154 : 540,
+    minHeight: isQuick ? 116 : 540,
     show: false,
     title: isQuick ? tr("Aufgabe erfassen") : 'Machen',
     transparent: isQuick,
@@ -232,11 +232,11 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       if(action==='quickExpanded'){
         if(event.sender!==quick.webContents||typeof data.expanded!=='boolean')throw Error(tr('Unzulässiger Zugriff.'));
         const area=screen.getDisplayMatching(quick.getBounds()).workArea;
-        const height=Math.min(data.expanded?620:154,Math.max(154,area.height-24));
+        const height=Math.min(data.expanded?620:116,Math.max(116,area.height-24));
         const [x,y]=quick.getPosition();
         // Windows pins a non-resizable window's sizing constraints after growth.
         quick.setResizable(true);
-        quick.setMinimumSize(500,154);
+        quick.setMinimumSize(500,116);
         quick.setSize(600,height);
         quick.setResizable(false);
         quick.setPosition(Math.max(area.x,Math.min(x,area.x+area.width-600)),Math.max(area.y+12,Math.min(y,area.y+area.height-height-12)));return;

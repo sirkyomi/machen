@@ -15,6 +15,7 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),os=
   const task=(await page.evaluate(()=>window.api.call('state'))).tasks[0];assert.equal(task.created,dates.today);assert.equal(task.scheduled,dates.tomorrow);
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
   await quick.locator('.quick').waitFor();assert.equal(await quick.locator('.quick').evaluate(el=>getComputedStyle(el).borderRadius),'20px');
+  assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds().height),116);
   assert.equal(await quick.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
   fs.mkdirSync('test-results',{recursive:true});await quick.screenshot({path:'test-results/rounded-quick.png',omitBackground:true});
   console.log('PASS tomorrow planning, today exclusion/count, actual creation date and rounded transparent popup');

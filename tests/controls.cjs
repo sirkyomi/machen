@@ -16,7 +16,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/modern-settings.png'});
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
   const bounds=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).getBounds());
-  const small=await bounds();await quick.getByRole('textbox',{name:'New task',exact:true}).fill('Capture with details');
+  const small=await bounds();assert.equal(small.height,116);await quick.getByRole('textbox',{name:'New task',exact:true}).fill('Capture with details');
   await quick.getByRole('button',{name:'Expand task details'}).click();assert.ok((await bounds()).height>small.height+200);
   await quick.locator('#create-entry').fill('Wor');await quick.getByRole('option',{name:'Work',exact:true}).click();
   await quick.locator('#create-context-entry').fill('NewContext');await quick.locator('#create-context-entry').press('Enter');
