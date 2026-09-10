@@ -38,6 +38,7 @@
   'Noch nichts auf dem Zettel. Erfasse deine erste Aufgabe oben.':'Nothing here yet. Add your first task above.',
   'Erledigt':'Completed','Offen':'Open','Keine offenen Aufgaben.':'No open tasks.',
   'Wieder öffnen':'Reopen','Abschließen':'Complete','Fällig am':'Due date','Fällig ':'Due ','Notiz':'Note','Ein Anhang':'1 attachment','{count} Anhänge':'{count} attachments',
+  'Aufgabenaktionen':'Task actions','Als erledigt markieren':'Mark as complete','Für heute einplanen':'Schedule for today','Für morgen einplanen':'Schedule for tomorrow','Aktionen für {name}':'Actions for {name}','Neue Aufgabe in {name}':'New task in {name}',
   'Aufgabendetails':'Task details','Details schließen':'Close details','Aufgabe':'Task','Neue Aufgabe':'New task','Was möchtest du erledigen?':'What would you like to do?',
   'Hinzufügen':'Add','Aufgabendetails ausklappen':'Expand task details','Priorität':'Priority','Keine':'None',
   'Notizen & E-Mail-Kontext':'Notes & email context','Weitere Infos, E-Mail-Text oder einen Link hier ablegen …':'Add details, email text or a link…',

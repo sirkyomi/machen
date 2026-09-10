@@ -9,7 +9,9 @@ function updateControls() {
 }
 function paintUpdates(){
   document.querySelectorAll('[data-update-settings]').forEach(el=>el.innerHTML=updateControls());
-  const showNotice=['available','ready','download-error'].includes(updateState?.status);
+  const versionParts=value=>String(value||'').match(/\d+/g)?.map(Number)||[];
+  const isNewer=(target,current)=>{const next=versionParts(target),installed=versionParts(current);for(let index=0;index<Math.max(next.length,installed.length);index++){const difference=(next[index]||0)-(installed[index]||0);if(difference)return difference>0;}return false;};
+  const showNotice=['available','ready'].includes(updateState?.status)&&isNewer(updateState?.target,updateState?.version);
   document.querySelectorAll('[data-settings-update-dot],[data-updates-tab-dot]').forEach(dot=>dot.hidden=!showNotice);
 }
 document.addEventListener('click',async e=>{

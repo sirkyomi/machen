@@ -24,7 +24,8 @@ let state,
   toastTimer,
   dirty = false,
   recordingShortcut = false,
-  settingsTab = 'general';
+  settingsTab = 'general',
+  contextMenu = null;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
 function syncQuickHeight() {
@@ -114,6 +115,23 @@ function settingsContent() {
   const pane = (name, content) => `<section class="settings-pane" role="tabpanel" ${settingsTab === name ? '' : 'hidden'}>${content}</section>`;
   return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('appearance', tr("Erscheinungsbild"))}${tab('sidebar', tr("Seitenleiste"))}${tab('capture', tr("Schnellerfassung"))}${tab('updates', tr("Updates"))}</div><form id="settings-form">${pane('general', `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button type="button" data-action="quit">${tr("Machen beenden")}</button>`)}${pane('appearance', `${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}`)}${pane('sidebar', `<h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p><label class="checklabel"><input type="checkbox" name="showProjects" ${state.settings.showProjects ? 'checked' : ''}>${tr("Projekte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="showContexts" ${state.settings.showContexts ? 'checked' : ''}>${tr("Kontexte in der Seitenleiste anzeigen")}</label>`)}${pane('capture', `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label>`)}${pane('updates', '<section data-update-settings></section>')}</form></div>`;
 }
+function tomorrow() {
+  const value = new Date();
+  value.setDate(value.getDate() + 1);
+  return localDay(value);
+}
+function contextMenuMarkup() {
+  if (!contextMenu) return '';
+  const {type, value, x, y} = contextMenu;
+  const position = `left:${Math.min(x, window.innerWidth - 244)}px;top:${Math.min(y, window.innerHeight - 230)}px`;
+  if (type === 'task') {
+    const task = allTasks().find(item => item.id === value);
+    if (!task) return '';
+    return `<div class="context-menu" role="menu" aria-label="${tr("Aufgabenaktionen")}" style="${position}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="toggle">${task.done ? tr("Wieder öffnen") : tr("Als erledigt markieren")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" data-context-action="plan-today">${tr("Für heute einplanen")}</button><button type="button" role="menuitem" data-context-action="plan-tomorrow">${tr("Für morgen einplanen")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" class="danger" data-context-action="delete">${tr("Löschen")}</button></div>`;
+  }
+  const label = type === 'project' ? `+${value}` : `@${value}`;
+  return `<div class="context-menu" role="menu" aria-label="${tr("Aktionen für {name}", {name: label})}" style="${position}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="new">${tr("Neue Aufgabe in {name}", {name: label})}</button></div>`;
+}
 function content() {
   if (view === 'settings') return settingsContent();
   const title = view === 'archive' ? tr("Archiv") : view === 'history' ? tr("Verlauf") : view === 'all' ? tr("Alle Aufgaben") : view === 'project' ? project : view === 'context' ? '@' + context : day === localDay() ? tr("Heute") : dateLabel(day);
@@ -202,6 +220,7 @@ function render() {
   }
   const projects = allProjects(), contexts = allContexts();
   root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
+  root.insertAdjacentHTML('beforeend', contextMenuMarkup());
   restoreComposer(draft);
   enhanceControls();
   paintUpdates();
@@ -241,10 +260,52 @@ root.addEventListener('change', async e => {
     render();
   }
 });
+root.addEventListener('contextmenu', e => {
+  const task = e.target.closest('.task');
+  const projectButton = e.target.closest('[data-project]');
+  const contextButton = e.target.closest('[data-context]');
+  if (!task && !projectButton && !contextButton) return;
+  e.preventDefault();
+  contextMenu = task ? {type: 'task', value: task.querySelector('[data-select]')?.dataset.select, x: e.clientX, y: e.clientY} : projectButton ? {type: 'project', value: projectButton.dataset.project, x: e.clientX, y: e.clientY} : {type: 'context', value: contextButton.dataset.context, x: e.clientX, y: e.clientY};
+  render();
+});
+async function runContextAction(action) {
+  const menu = contextMenu;
+  contextMenu = null;
+  if (!menu) return;
+  if (menu.type !== 'task') {
+    project = menu.type === 'project' ? menu.value : '';
+    context = menu.type === 'context' ? menu.value : '';
+    view = menu.type;
+    selected = null;
+    render();
+    if (action === 'new') requestAnimationFrame(() => document.querySelector('#composer input[name=title]')?.focus());
+    return;
+  }
+  const task = allTasks().find(item => item.id === menu.value);
+  if (!task) return;
+  if (action === 'open') {
+    selected = task.id;
+    render();
+  } else if (action === 'toggle') {
+    await call('toggle', {id: task.id});
+    await refresh();
+  } else if (action === 'plan-today' || action === 'plan-tomorrow') {
+    await call('edit', {id: task.id, title: task.title, priority: task.priority, due: task.due, scheduled: action === 'plan-today' ? localDay() : tomorrow()});
+    await refresh();
+  } else if (action === 'delete' && await askInApp(tr("Aufgabe löschen?"), displayTitle(task.title) + tr(" wird gelöscht. Der Verlauf bleibt erhalten."), tr("Löschen"))) {
+    await call('delete', {id: task.id});
+    await refresh();
+  }
+}
 root.addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
   try {
+    if (b.dataset.contextAction) {
+      await runContextAction(b.dataset.contextAction);
+      return;
+    }
     if (b.dataset.settingsTab) {
       settingsTab = b.dataset.settingsTab;
       render();
@@ -391,6 +452,12 @@ root.addEventListener('click', async e => {
     toast(err.message);
   }
 });
+document.addEventListener('click', e => {
+  if (contextMenu && !e.target.closest('.context-menu')) {
+    contextMenu = null;
+    render();
+  }
+});
 async function saveDetail() {
   const data = taskFormData(document.querySelector('#detail-form'));
   await call('edit', {
@@ -483,7 +550,10 @@ document.addEventListener('keydown', async e => {
   }
   if (pendingDialog || e.defaultPrevented) return;
   if (e.key === 'Escape') {
-    if (quick) call('hideQuick');else if (selected && (await discard())) {
+    if (contextMenu) {
+      contextMenu = null;
+      render();
+    } else if (quick) call('hideQuick');else if (selected && (await discard())) {
       selected = null;
       render();
     }

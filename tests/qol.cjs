@@ -22,6 +22,15 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
     await page.getByRole('button',{name:'Add',exact:true}).click();
     const contextTask=(await page.evaluate(()=>window.api.call('state'))).tasks.find(task=>task.title.startsWith('Context note'));
     assert.match(contextTask.title,/@Office/);
+    await page.getByText('Context note',{exact:true}).click({button:'right'});
+    await page.getByRole('menu',{name:'Task actions'}).waitFor();
+    await page.getByRole('menuitem',{name:'Schedule for tomorrow'}).click();
+    const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);const planned=tomorrow.toISOString().slice(0,10);
+    await page.waitForFunction(day=>window.api.call('state').then(s=>s.tasks.some(task=>task.title.startsWith('Context note')&&task.scheduled===day)),planned);
+    await page.locator('[data-project="Work"]').click({button:'right'});
+    await page.getByRole('menu',{name:'Actions for +Work'}).getByRole('menuitem',{name:'New task in +Work'}).click();
+    await page.getByRole('heading',{name:'Work',exact:true}).waitFor();
+    await page.getByRole('textbox',{name:'New task',exact:true}).waitFor();
     const lists=await page.locator('.sidebar-list').evaluateAll(items=>items.map(item=>({overflow:getComputedStyle(item.querySelector('.sidebar-list-items')).overflowY,flex:getComputedStyle(item).flexGrow})));
     assert.deepEqual(lists,[{overflow:'auto',flex:'1'},{overflow:'auto',flex:'1'}]);
     await page.getByRole('button',{name:'Settings',exact:true}).click();

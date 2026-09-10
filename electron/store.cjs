@@ -75,7 +75,9 @@ class Store {
         if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 2000 || /[\r\n]/.test(data.title) || /(?:^|\s)(?:id|due|pri|t):/.test(data.title)) throw Error('Bitte einen Titel ohne reservierte id:, due: oder pri:-Felder eingeben.');
         if (data.priority && !/^[A-Z]$/.test(data.priority)) throw Error('Ungültige Priorität.');
         if (data.due && !datePattern.test(data.due)) throw Error('Ungültiges Datum.');
+        if(data.scheduled && (!datePattern.test(data.scheduled) || Number.isNaN(Date.parse(data.scheduled+'T12:00:00Z')) || new Date(data.scheduled+'T12:00:00Z').toISOString().slice(0,10)!==data.scheduled)) throw Error('Ungültiges Datum.');
         Object.assign(t,{title:data.title.trim(),priority:data.priority||'',due:data.due||''});
+        if(data.scheduled !== undefined) t.scheduled=data.scheduled||'';
         const old = this.meta.context[t.id]||{};
         this.meta.context[t.id] = {...old,notes:String(data.notes??old.notes??'').slice(0,100000)};
       } else if (action === 'toggle') { t.done = !t.done; t.completed = t.done ? today() : '';if(!t.done&&this.archived.includes(t)){this.archived=this.archived.filter(x=>x.id!==t.id);this.tasks.push(t);} }

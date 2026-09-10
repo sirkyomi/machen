@@ -4,7 +4,8 @@ test('planned day survives editing and restart while creation and history retain
  const dir=fixture(t),store=new Store(dir);store.mutate('create',{title:'Tomorrow',scheduled:'2099-01-02'});
  const task=store.snapshot().tasks[0];assert.equal(task.created,today());assert.equal(task.scheduled,'2099-01-02');assert.equal(store.snapshot().events[0].day,today());
  store.mutate('edit',{id:task.id,title:'Still tomorrow'});assert.equal(new Store(dir).snapshot().tasks[0].scheduled,'2099-01-02');
- assert.match(fs.readFileSync(store.file,'utf8'),/t:2099-01-02/);assert.equal(parse('Task t:2099-01-02 id:a').title,'Task');
+ store.mutate('edit',{id:task.id,title:'Moved tomorrow',scheduled:'2099-01-03'});assert.equal(new Store(dir).snapshot().tasks[0].scheduled,'2099-01-03');
+ assert.match(fs.readFileSync(store.file,'utf8'),/t:2099-01-03/);assert.equal(parse('Task t:2099-01-02 id:a').title,'Task');
  assert.throws(()=>store.mutate('create',{title:'Invalid',scheduled:'2026-02-31'}));
 });
 test('todo.txt parses dates, projects, context and completed priority',()=>{const t=parse('(A) 2026-09-08 Bericht +Arbeit @mail due:2026-09-10 id:abc');assert.equal(t.title,'Bericht +Arbeit @mail');assert.equal(t.due,'2026-09-10');assert.equal(serialize(t),'(A) 2026-09-08 Bericht +Arbeit @mail due:2026-09-10 id:abc');const c=parse('x 2026-09-09 2026-09-08 Bericht pri:A id:abc');assert.equal(c.priority,'A');assert.equal(c.completed,'2026-09-09');assert.equal(serialize(c),'x 2026-09-09 2026-09-08 Bericht pri:A id:abc');});
