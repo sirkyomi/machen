@@ -4,11 +4,13 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
 (async()=>{
   const home=fs.mkdtempSync(path.join(os.tmpdir(),'machen-qol-')),dir=path.join(home,'data');fs.mkdirSync(dir);
   fs.writeFileSync(path.join(home,'settings.json'),JSON.stringify({directory:dir,language:'en',theme:'dark',shortcut:'Alt+Shift+F4'}));
-  fs.writeFileSync(path.join(dir,'todo.txt'),'2026-09-09 Work task +Work @Office id:one\n2026-09-09 Personal task +Home @Phone id:two\n');
+  fs.writeFileSync(path.join(dir,'todo.txt'),'2026-09-09 Work task +Work @Office id:one\n2026-09-09 Personal task +Home @Phone id:two\nx 2026-09-09 2026-09-08 Finished +Closed @Done id:three\n');
   let app;
   try{
     app=await electron.launch({args:['.'],env:{...process.env,MACHEN_TEST_HOME:home}});
     const page=await app.firstWindow();
+    assert.equal(await page.locator('[data-project="Closed"]').count(),0);
+    assert.equal(await page.locator('[data-context="Done"]').count(),0);
     await page.locator('[data-project="Work"]').click();
     await page.getByRole('heading',{name:'Work',exact:true}).waitFor();
     await page.getByRole('textbox',{name:'New task',exact:true}).fill('Project note');

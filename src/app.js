@@ -122,15 +122,22 @@ function tomorrow() {
 }
 function contextMenuMarkup() {
   if (!contextMenu) return '';
-  const {type, value, x, y} = contextMenu;
-  const position = `left:${Math.min(x, window.innerWidth - 244)}px;top:${Math.min(y, window.innerHeight - 230)}px`;
+  const {type, value} = contextMenu;
   if (type === 'task') {
     const task = allTasks().find(item => item.id === value);
     if (!task) return '';
-    return `<div class="context-menu" role="menu" aria-label="${tr("Aufgabenaktionen")}" style="${position}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="toggle">${task.done ? tr("Wieder öffnen") : tr("Als erledigt markieren")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" data-context-action="plan-today">${tr("Für heute einplanen")}</button><button type="button" role="menuitem" data-context-action="plan-tomorrow">${tr("Für morgen einplanen")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" class="danger" data-context-action="delete">${tr("Löschen")}</button></div>`;
+    return `<div class="context-menu" role="menu" aria-label="${tr("Aufgabenaktionen")}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="toggle">${task.done ? tr("Wieder öffnen") : tr("Als erledigt markieren")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" data-context-action="plan-today">${tr("Für heute einplanen")}</button><button type="button" role="menuitem" data-context-action="plan-tomorrow">${tr("Für morgen einplanen")}</button><div class="context-menu-divider"></div><button type="button" role="menuitem" class="danger" data-context-action="delete">${tr("Löschen")}</button></div>`;
   }
   const label = type === 'project' ? `+${value}` : `@${value}`;
-  return `<div class="context-menu" role="menu" aria-label="${tr("Aktionen für {name}", {name: label})}" style="${position}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="new">${tr("Neue Aufgabe in {name}", {name: label})}</button></div>`;
+  return `<div class="context-menu" role="menu" aria-label="${tr("Aktionen für {name}", {name: label})}"><button type="button" role="menuitem" data-context-action="open">${tr("Öffnen")}</button><button type="button" role="menuitem" data-context-action="new">${tr("Neue Aufgabe in {name}", {name: label})}</button></div>`;
+}
+function showContextMenu(x, y) {
+  document.querySelector('.context-menu')?.remove();
+  root.insertAdjacentHTML('beforeend', contextMenuMarkup());
+  const menu = document.querySelector('.context-menu');
+  if (!menu) return;
+  menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - menu.offsetHeight - 8))}px`;
 }
 function content() {
   if (view === 'settings') return settingsContent();
@@ -200,6 +207,8 @@ function panel() {
 }
 function render() {
   closeControl();
+  contextMenu = null;
+  document.querySelector('.context-menu')?.remove();
   const draft = captureComposer();
   if (quick) {
     document.body.classList.add('quick-window');
@@ -218,9 +227,8 @@ function render() {
     paintUpdates();
     return;
   }
-  const projects = allProjects(), contexts = allContexts();
+  const projects = openProjects(), contexts = openContexts();
   root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
-  root.insertAdjacentHTML('beforeend', contextMenuMarkup());
   restoreComposer(draft);
   enhanceControls();
   paintUpdates();
@@ -267,7 +275,7 @@ root.addEventListener('contextmenu', e => {
   if (!task && !projectButton && !contextButton) return;
   e.preventDefault();
   contextMenu = task ? {type: 'task', value: task.querySelector('[data-select]')?.dataset.select, x: e.clientX, y: e.clientY} : projectButton ? {type: 'project', value: projectButton.dataset.project, x: e.clientX, y: e.clientY} : {type: 'context', value: contextButton.dataset.context, x: e.clientX, y: e.clientY};
-  render();
+  showContextMenu(e.clientX, e.clientY);
 });
 async function runContextAction(action) {
   const menu = contextMenu;
@@ -299,6 +307,7 @@ async function runContextAction(action) {
   }
 }
 root.addEventListener('click', async e => {
+  if (e.button !== 0) return;
   const b = e.target.closest('button');
   if (!b) return;
   try {
@@ -452,10 +461,11 @@ root.addEventListener('click', async e => {
     toast(err.message);
   }
 });
-document.addEventListener('click', e => {
+document.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
   if (contextMenu && !e.target.closest('.context-menu')) {
     contextMenu = null;
-    render();
+    document.querySelector('.context-menu')?.remove();
   }
 });
 async function saveDetail() {
@@ -552,7 +562,7 @@ document.addEventListener('keydown', async e => {
   if (e.key === 'Escape') {
     if (contextMenu) {
       contextMenu = null;
-      render();
+      document.querySelector('.context-menu')?.remove();
     } else if (quick) call('hideQuick');else if (selected && (await discard())) {
       selected = null;
       render();

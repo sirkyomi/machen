@@ -14,6 +14,9 @@ function displayTitle(title) {
 function allProjects() {
   return [...new Set(allTasks().flatMap(t => taskProjects(t.title)))].sort((a, b) => a.localeCompare(b, locale()));
 }
+function openProjects() {
+  return [...new Set(state.tasks.filter(t => !t.done).flatMap(t => taskProjects(t.title)))].sort((a, b) => a.localeCompare(b, locale()));
+}
 function allTasks() {
   return [...state.tasks, ...(state.archived || [])];
 }
@@ -29,6 +32,9 @@ function taskContexts(title) {
 }
 function allContexts() {
   return [...new Set(allTasks().flatMap(t => taskContexts(t.title)))].sort((a, b) => a.localeCompare(b, locale()));
+}
+function openContexts() {
+  return [...new Set(state.tasks.filter(t => !t.done).flatMap(t => taskContexts(t.title)))].sort((a, b) => a.localeCompare(b, locale()));
 }
 function contextChip(name, removable = false) {
   return projectChip(name, removable, true);
