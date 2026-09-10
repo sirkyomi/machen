@@ -23,7 +23,8 @@ let state,
   context = '',
   toastTimer,
   dirty = false,
-  recordingShortcut = false;
+  recordingShortcut = false,
+  settingsTab = 'general';
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
 function syncQuickHeight() {
@@ -73,7 +74,8 @@ function brand() {
   return `<div class="brand" aria-label="Machen"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 24V8l10 10L26 8v9"/><path d="m18 22 3.2 3L28 18"/></svg></span><span class="brand-name">Machen</span></div>`;
 }
 function nav(name, label) {
-  return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;
+  const updateDot = name === 'settings' ? '<span class="notification-dot" data-settings-update-dot hidden aria-hidden="true"></span>' : '';
+  return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${updateDot}${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;
 }
 function sidebarList(kind, label, items) {
   const selectedValue = kind === 'project' ? project : context;
@@ -108,7 +110,9 @@ function group(title, tasks, empty = '') {
   return `<section class="group"><div class="group-header"><h2>${title}</h2><span>${tasks.length}</span></div>${tasks.length ? tasks.map(row).join('') : empty ? `<p class="empty">${empty}</p>` : ''}</section>`;
 }
 function settingsContent() {
-  return `<div class="settings"><h1>${tr("Einstellungen")}</h1>${languagePicker()}<section data-update-settings>${updateControls()}</section><h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><form id="settings-form"><h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p><h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p><label class="checklabel"><input type="checkbox" name="showProjects" ${state.settings.showProjects ? 'checked' : ''}>${tr("Projekte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="showContexts" ${state.settings.showContexts ? 'checked' : ''}>${tr("Kontexte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label><button class="primary" type="submit">${tr("Einstellungen speichern")}</button></form><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button data-action="quit">${tr("Machen beenden")}</button></div>`;
+  const tab = (name, label) => `<button type="button" role="tab" data-settings-tab="${name}" aria-selected="${settingsTab === name}" tabindex="${settingsTab === name ? 0 : -1}">${label}${name === 'updates' ? '<span class="notification-dot" data-updates-tab-dot hidden aria-hidden="true"></span>' : ''}</button>`;
+  const pane = (name, content) => `<section class="settings-pane" role="tabpanel" ${settingsTab === name ? '' : 'hidden'}>${content}</section>`;
+  return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('appearance', tr("Erscheinungsbild"))}${tab('sidebar', tr("Seitenleiste"))}${tab('capture', tr("Schnellerfassung"))}${tab('updates', tr("Updates"))}</div><form id="settings-form">${pane('general', `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button type="button" data-action="quit">${tr("Machen beenden")}</button>`)}${pane('appearance', `${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}`)}${pane('sidebar', `<h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p><label class="checklabel"><input type="checkbox" name="showProjects" ${state.settings.showProjects ? 'checked' : ''}>${tr("Projekte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="showContexts" ${state.settings.showContexts ? 'checked' : ''}>${tr("Kontexte in der Seitenleiste anzeigen")}</label>`)}${pane('capture', `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label>`)}${pane('updates', '<section data-update-settings></section>')}</form></div>`;
 }
 function content() {
   if (view === 'settings') return settingsContent();
@@ -197,7 +201,7 @@ function render() {
     return;
   }
   const projects = allProjects(), contexts = allContexts();
-  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}<button class="update-notice" data-action="updates" data-update-notice hidden></button></div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
+  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
   restoreComposer(draft);
   enhanceControls();
   paintUpdates();
@@ -223,7 +227,15 @@ root.addEventListener('input', e => {
     }
   }
 });
-root.addEventListener('change', e => {
+root.addEventListener('change', async e => {
+  if (e.target.closest('#settings-form') && ['showProjects', 'showContexts', 'autoStart'].includes(e.target.name)) {
+    try {
+      await saveSettingsForm();
+    } catch (err) {
+      toast(err.message);
+    }
+    return;
+  }
   if (e.target.id === 'jump-date' && e.target.value) {
     day = e.target.value;
     render();
@@ -233,6 +245,11 @@ root.addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
   try {
+    if (b.dataset.settingsTab) {
+      settingsTab = b.dataset.settingsTab;
+      render();
+      return;
+    }
     if (b.dataset.view) {
       if (!(await discard())) return;
       view = b.dataset.view;
@@ -292,7 +309,7 @@ root.addEventListener('click', async e => {
       applyTheme();
     }
     const a = b.dataset.action;
-    if(a==='updates'){if(!(await discard()))return;view='settings';selected=null;project='';context='';render();}
+    if(a==='updates'){if(!(await discard()))return;view='settings';settingsTab='updates';selected=null;project='';context='';render();}
     else if (a === 'recordShortcut') {
       recordingShortcut = true;
       b.setAttribute('aria-pressed', 'true');
@@ -382,6 +399,18 @@ async function saveDetail() {
   });
   dirty = false;
 }
+async function saveSettingsForm() {
+  const form = document.querySelector('#settings-form');
+  if (!form) return;
+  const data = Object.fromEntries(new FormData(form));
+  await call('settings', {
+    ...data,
+    autoStart: data.autoStart === 'on',
+    showProjects: data.showProjects === 'on',
+    showContexts: data.showContexts === 'on'
+  });
+  await refresh();
+}
 root.addEventListener('submit', async e => {
   e.preventDefault();
   const form = e.target;
@@ -412,12 +441,7 @@ root.addEventListener('submit', async e => {
       toast(tr("Änderungen gespeichert."));
     }
     if (form.id === 'settings-form') {
-      await call('settings', {
-        ...data,
-        autoStart: data.autoStart === 'on'
-      });
-      await refresh();
-      toast(tr("Einstellungen gespeichert."));
+      await saveSettingsForm();
     }
   } catch (err) {
     toast(err.message);
@@ -450,6 +474,11 @@ document.addEventListener('keydown', async e => {
     button?.setAttribute('aria-pressed', 'false');
     if (button) button.textContent = tr("Shortcut ändern");
     document.querySelector('#shortcut-capture-status').textContent = shortcut;
+    try {
+      await saveSettingsForm();
+    } catch (err) {
+      toast(err.message);
+    }
     return;
   }
   if (pendingDialog || e.defaultPrevented) return;

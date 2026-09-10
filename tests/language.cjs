@@ -37,6 +37,7 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),pat
   await page.locator('.sidebar [data-language]').selectOption('en');
   await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('heading',{name:'Settings',exact:true}).waitFor();
+  await page.locator('[data-settings-tab="capture"]').click();
   await page.getByRole('heading',{name:'Quick capture',exact:true}).waitFor();
   const menu=await app.evaluate(({Menu})=>Menu.getApplicationMenu().items.map(x=>x.label));assert.deepEqual(menu,['Machen','Edit','View']);
   fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/english-settings.png'});

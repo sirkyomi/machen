@@ -10,6 +10,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await app.firstWindow();let page;for(let i=0;i<100&&!page;i++){page=app.windows().find(w=>w.url().includes('index.html')&&!w.url().includes('quick=1'));if(!page)await new Promise(r=>setTimeout(r,50));}
   fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/english-today.png'});
   await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await page.locator('[data-settings-tab="appearance"]').click();
   const language=page.locator('.settings').getByRole('combobox',{name:'Sprache / Language',exact:true});
   await language.click();await page.getByRole('option',{name:'Deutsch',exact:true}).click();
   await page.getByRole('heading',{name:'Einstellungen',exact:true}).waitFor();

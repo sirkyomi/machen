@@ -225,4 +225,9 @@
 .sidebar .bottom{margin-top:0}
 .shortcut-recorder{display:flex;gap:8px;align-items:center}.shortcut-recorder input{flex:1}.shortcut-recorder button{flex-shrink:0}.shortcut-recorder button[aria-pressed=true]{background:var(--selected);color:var(--accent)}
 .settings .checklabel+.checklabel{margin-top:10px}
+.settings-heading{display:flex;align-items:baseline;justify-content:space-between;gap:18px}
+.settings-tabs{display:flex;gap:3px;margin:25px 0 8px;padding:4px;border-bottom:1px solid var(--line);overflow-x:auto}.settings-tabs button{flex:0 0 auto;margin:0;padding:8px 10px;border-radius:6px;color:var(--muted);font-size:12px}.settings-tabs button[aria-selected=true]{background:var(--selected);color:var(--ink)}
+.settings-pane{padding:16px 0 12px}.settings-pane[hidden]{display:none}.settings-pane h2:first-child,.settings-pane [data-update-settings]+h2{margin-top:4px}.settings-pane .language-picker{margin-top:4px}
+.notification-dot{display:inline-block;flex:0 0 auto;width:7px;height:7px;margin-left:auto;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--side)}.settings-tabs .notification-dot{width:6px;height:6px;margin-left:5px;vertical-align:middle;box-shadow:0 0 0 2px var(--paper)}
+@media(max-width:650px){.settings-heading{align-items:flex-start;flex-direction:column;gap:5px}.settings-tabs{margin-inline:-4px}.settings-tabs button{padding-inline:9px}}
 @media(max-width:650px){.sidebar-lists{display:none}.shortcut-recorder{align-items:stretch;flex-direction:column}.shortcut-recorder button{width:100%}}

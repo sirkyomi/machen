@@ -21,8 +21,8 @@ try{
  await page.getByRole('button',{name:'Details schließen'}).click();
  await page.screenshot({path:'test-results/today.png'});
  const text=fs.readFileSync(path.join(dir,'todo.txt'),'utf8');assert.match(text,/Zahnarzttermin/);assert.match(text,/^x /m);
- await page.getByRole('button',{name:'Einstellungen',exact:true}).click();
- await page.getByRole('button',{name:'Shortcut ändern',exact:true}).click();await page.keyboard.press('Alt+Shift+T');assert.equal(await page.locator('#shortcut').inputValue(),'Alt+Shift+T');await page.getByRole('button',{name:'Einstellungen speichern'}).click();
+ await page.getByRole('button',{name:'Einstellungen',exact:true}).click();await page.locator('[data-settings-tab="capture"]').click();
+ await page.getByRole('button',{name:'Shortcut ändern',exact:true}).click();await page.keyboard.press('Alt+Shift+T');assert.equal(await page.locator('#shortcut').inputValue(),'Alt+Shift+T');await page.waitForFunction(()=>window.api.call('state').then(s=>s.settings.shortcut==='Alt+Shift+T'));
  assert.equal(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Alt+Shift+T')),true);
  const second=path.join(home,'second');fs.mkdirSync(second);await app.evaluate(({dialog},dir)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[dir]});},second);
  await page.getByRole('button',{name:'Ordner wechseln'}).click();await page.getByText(second,{exact:true}).waitFor();

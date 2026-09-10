@@ -9,8 +9,8 @@ function updateControls() {
 }
 function paintUpdates(){
   document.querySelectorAll('[data-update-settings]').forEach(el=>el.innerHTML=updateControls());
-  const badge=document.querySelector('[data-update-notice]');
-  if(badge){badge.hidden=!['available','ready','download-error'].includes(updateState?.status);badge.textContent=tr(updateState?.status==='ready'?'Update bereit':'Update verfügbar');}
+  const showNotice=['available','ready','download-error'].includes(updateState?.status);
+  document.querySelectorAll('[data-settings-update-dot],[data-updates-tab-dot]').forEach(dot=>dot.hidden=!showNotice);
 }
 document.addEventListener('click',async e=>{
   const button=e.target.closest('[data-update]');if(!button)return;
