@@ -86,6 +86,15 @@ function taskFormData(form) {
   const pickers = [...form.querySelectorAll('.project-picker')];
   for (const picker of pickers) pickProject(picker, picker.querySelector('[role=combobox]').value);
   const data = Object.fromEntries(new FormData(form));
+  // todo.txt shorthand: "(A) Aufgabe" sets a priority while keeping the title clean.
+  // An explicitly selected priority always takes precedence.
+  if ((form.id === 'composer' || form.id === 'quick-form') && !data.priority) {
+    const match = (data.title || '').match(/^\(([A-Z])\)\s+(.+)$/);
+    if (match) {
+      data.priority = match[1];
+      data.title = match[2];
+    }
+  }
   data.dueTime = data.due && data.dueHour ? `${data.dueHour}:${data.dueMinute || '00'}` : '';
   delete data.dueHour;
   delete data.dueMinute;

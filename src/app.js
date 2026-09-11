@@ -27,8 +27,7 @@ let state,
   recordingShortcut = false,
   settingsTab = 'general',
   contextMenu = null,
-  commandPalette = null,
-  draggedTaskId = null;
+  commandPalette = null;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
 function syncPinnedSize() {
@@ -124,16 +123,17 @@ function week() {
   }).join('') + '</div>';
 }
 function sortTasks(tasks) {
-  const mode = state?.settings.taskSort || 'manual';
-  if (mode === 'manual') return [...tasks];
-  if (mode === 'due') return [...tasks].sort((a, b) => (a.due || '9999-12-31').localeCompare(b.due || '9999-12-31') || (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99') || b.created.localeCompare(a.created));
-  return [...tasks].sort((a, b) => (a.priority || 'Z').localeCompare(b.priority || 'Z') || b.created.localeCompare(a.created));
+  const priorityRank = task => task.priority ? task.priority.charCodeAt(0) : 91;
+  return [...tasks].sort((a, b) => priorityRank(a) - priorityRank(b) || (a.due || '9999-12-31').localeCompare(b.due || '9999-12-31') || (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99') || b.created.localeCompare(a.created));
+}
+function priorityTone(priority) {
+  if (/^[A-F]$/.test(priority)) return priority;
+  return 'standard';
 }
 function reminderDateLabel(value) {
   return new Date(value).toLocaleString(locale(), {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 }
 function row(t) {
-  const reorderable = !pinned && view !== 'archive' && (state.settings.taskSort || 'manual') === 'manual';
   const projects = taskProjects(t.title), contexts = taskContexts(t.title), subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
   const meta = [
     t.due ? `${tr("Fällig ")}${dateLabel(t.due)}${t.dueTime ? `, ${escapeHtml(t.dueTime)}` : ''}` : '',
@@ -142,11 +142,17 @@ function row(t) {
     t.notes ? tr("Notiz") : '',
     t.files?.length ? tr(t.files.length === 1 ? "Ein Anhang" : "{count} Anhänge", {count: t.files.length}) : ''
   ].filter(Boolean);
-  return `<div class="task ${t.done ? 'done' : ''}" data-task-id="${escapeHtml(t.id)}">${reorderable ? `<button type="button" class="drag-handle" draggable="true" data-drag-task="${escapeHtml(t.id)}" aria-label="${tr("Aufgabe verschieben")}" title="${tr("Aufgabe verschieben")}"><span class="drag-dots" aria-hidden="true"></span></button>` : ''}<button class="check ${t.done ? 'done' : ''}" data-toggle="${escapeHtml(t.id)}" aria-label="${t.done ? tr("Wieder öffnen") : tr("Abschließen")}: ${escapeHtml(displayTitle(t.title))}">${t.done ? icon('check') : ''}</button><button class="task-body" data-select="${escapeHtml(t.id)}"><span class="task-title">${escapeHtml(displayTitle(t.title))}</span>${projects.length || contexts.length ? `<span class="task-projects">${projects.map(p => projectChip(p)).join('')}${contexts.map(p => contextChip(p)).join('')}</span>` : ''}${meta.length ? `<span class="task-meta">${meta.map(item => `<span>${item}</span>`).join('')}</span>` : ''}</button>${t.priority ? `<span class="priority">${t.priority}</span>` : ''}</div>`;
+  return `<div class="task ${t.done ? 'done' : ''}" data-task-id="${escapeHtml(t.id)}"><button class="check ${t.done ? 'done' : ''}" data-toggle="${escapeHtml(t.id)}" aria-label="${t.done ? tr("Wieder öffnen") : tr("Abschließen")}: ${escapeHtml(displayTitle(t.title))}">${t.done ? icon('check') : ''}</button><button class="task-body" data-select="${escapeHtml(t.id)}"><span class="task-title">${escapeHtml(displayTitle(t.title))}</span>${projects.length || contexts.length ? `<span class="task-projects">${projects.map(p => projectChip(p)).join('')}${contexts.map(p => contextChip(p)).join('')}</span>` : ''}${meta.length ? `<span class="task-meta">${meta.map(item => `<span>${item}</span>`).join('')}</span>` : ''}</button></div>`;
 }
 function group(title, tasks, empty = '') {
   if (!tasks.length && !empty) return '';
-  return `<section class="group" ${(state.settings.taskSort || 'manual') === 'manual' && view !== 'archive' ? 'data-reorder-group' : ''}><div class="group-header"><h2>${title}</h2><span>${tasks.length}</span></div>${tasks.length ? tasks.map(row).join('') : empty ? `<p class="empty">${empty}</p>` : ''}</section>`;
+  return `<section class="group"><div class="group-header"><h2>${title}</h2><span>${tasks.length}</span></div>${tasks.length ? tasks.map(row).join('') : empty ? `<p class="empty">${empty}</p>` : ''}</section>`;
+}
+function priorityGroups(title, tasks, empty = '') {
+  if (!tasks.some(task => task.priority)) return group(title, tasks, empty);
+  const priorities = [...new Set(tasks.filter(task => task.priority).map(task => task.priority))].sort();
+  const buckets = [...priorities, ''].map(priority => [priority, tasks.filter(task => (task.priority || '') === priority)]).filter(([, items]) => items.length);
+  return `<section class="task-groups"><div class="group-header"><h2>${title}</h2><span>${tasks.length}</span></div><div class="priority-groups">${buckets.map(([priority, items]) => `<section class="group priority-group"><div class="group-header"><h2>${priority ? `${tr("Priorität")} <span class="priority" data-priority="${priorityTone(priority)}">${priority}</span>` : tr("Ohne Priorität")}</h2><span>${items.length}</span></div>${items.map(row).join('')}</section>`).join('')}</div></section>`;
 }
 function settingsContent() {
   const tab = (name, label) => `<button type="button" role="tab" data-settings-tab="${name}" aria-selected="${settingsTab === name}" tabindex="${settingsTab === name ? 0 : -1}">${label}${name === 'app' ? '<span class="notification-dot" data-updates-tab-dot hidden aria-hidden="true"></span>' : ''}</button>`;
@@ -268,11 +274,11 @@ function content() {
   if (view === 'archive') return html + group(tr("Archivierte Aufgaben"), tasks, hasFilters() ? tr("Keine archivierten Aufgaben passen zu den Filtern.") : tr("Noch keine archivierten Aufgaben."));
   if (!tasks.length && hasFilters()) return html + `<p class="empty">${tr("Keine Aufgaben passen zu diesen Filtern.")}</p>`;
   if (view === 'today') {
-    html += group(tr("Offen von vorher"), tasks.filter(t => !t.done && (!(t.scheduled || t.created) || (t.scheduled || t.created) < day)));
-    html += group(day === localDay() ? tr("Für heute") : tr("Für diesen Tag"), tasks.filter(t => !t.done && (t.scheduled || t.created) === day), tr("Noch nichts auf dem Zettel. Erfasse deine erste Aufgabe oben."));
+    html += priorityGroups(tr("Offen von vorher"), tasks.filter(t => !t.done && (!(t.scheduled || t.created) || (t.scheduled || t.created) < day)));
+    html += priorityGroups(day === localDay() ? tr("Für heute") : tr("Für diesen Tag"), tasks.filter(t => !t.done && (t.scheduled || t.created) === day), tr("Noch nichts auf dem Zettel. Erfasse deine erste Aufgabe oben."));
     html += group(tr("Erledigt"), tasks.filter(t => t.done && t.completed === day));
   } else {
-    html += group(tr("Offen"), tasks.filter(t => !t.done), tr("Keine offenen Aufgaben.")) + group(tr("Erledigt"), tasks.filter(t => t.done));
+    html += priorityGroups(tr("Offen"), tasks.filter(t => !t.done), tr("Keine offenen Aufgaben.")) + group(tr("Erledigt"), tasks.filter(t => t.done));
   }
   return html;
 }
@@ -494,48 +500,6 @@ root.addEventListener('change', async e => {
     day = e.target.value;
     render();
   }
-});
-async function saveGroupOrder(group) {
-  const ids = [...group.querySelectorAll(':scope > .task')].map(task => task.dataset.taskId).filter(Boolean);
-  if (ids.length) await call('reorder', {ids});
-}
-root.addEventListener('dragstart', e => {
-  const handle = e.target.closest('[data-drag-task]');
-  if (!handle) return;
-  draggedTaskId = handle.dataset.dragTask;
-  handle.closest('.task')?.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', draggedTaskId);
-});
-root.addEventListener('dragover', e => {
-  const group = e.target.closest('[data-reorder-group]');
-  const dragged = draggedTaskId && group?.querySelector(`.task[data-task-id="${CSS.escape(draggedTaskId)}"]`);
-  if (!dragged) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  const rows = [...group.querySelectorAll(':scope > .task:not(.dragging)')];
-  const next = rows.find(row => e.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
-  group.insertBefore(dragged, next || null);
-});
-root.addEventListener('drop', async e => {
-  const group = e.target.closest('[data-reorder-group]');
-  if (!group || !draggedTaskId) return;
-  e.preventDefault();
-  try { await saveGroupOrder(group); await refresh(); } catch (error) { toast(error.message); render(); }
-});
-root.addEventListener('dragend', () => {
-  root.querySelector('.task.dragging')?.classList.remove('dragging');
-  draggedTaskId = null;
-});
-root.addEventListener('keydown', async e => {
-  const handle = e.target.closest('[data-drag-task]');
-  if (!handle || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
-  const row = handle.closest('.task'), group = row?.closest('[data-reorder-group]');
-  const sibling = e.key === 'ArrowUp' ? row?.previousElementSibling : row?.nextElementSibling;
-  if (!group || !sibling?.classList.contains('task')) return;
-  e.preventDefault();
-  if (e.key === 'ArrowUp') group.insertBefore(row, sibling); else group.insertBefore(sibling, row);
-  try { await saveGroupOrder(group); await refresh(); requestAnimationFrame(() => root.querySelector(`[data-drag-task="${CSS.escape(handle.dataset.dragTask)}"]`)?.focus()); } catch (error) { toast(error.message); render(); }
 });
 root.addEventListener('contextmenu', e => {
   const task = e.target.closest('.task');

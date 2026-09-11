@@ -60,7 +60,6 @@ const defaults = {
   reminderLastDay: '',
   reminderLeadMinutes: 60,
   reminderTaskKeys: [],
-  taskSort: 'manual',
   theme: 'system',
   language: 'de'
 };
@@ -380,11 +379,6 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         saveSettings();
         broadcast();
         return true;
-      }
-      if (action === 'taskSort') {
-        if (!['manual', 'priority', 'due'].includes(data.sort)) throw Error(tr('Ungültige Sortierung.'));
-        settings.taskSort = data.sort;
-        saveSettings(); broadcast(); return true;
       }
       if (action === 'reminderSettings') {
         const leadMinutes = Number(data.leadMinutes);

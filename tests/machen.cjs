@@ -8,11 +8,11 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),pat
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>{errors.push('Unexpected system dialog: '+d.message());await d.dismiss();});
  await page.getByRole('heading',{name:'Heute',exact:true}).waitFor();
  await page.getByRole('button',{name:'Aufgabendetails ausklappen'}).click();
- await page.getByRole('textbox',{name:'Neue Aufgabe',exact:true}).fill('Entwurf abstimmen');
+ await page.getByRole('textbox',{name:'Neue Aufgabe',exact:true}).fill('(A) Entwurf abstimmen');
  const combo=page.locator('#create-entry');await combo.fill('Arb');
  await page.locator('#create-options').getByRole('option',{name:'Arbeit',exact:true}).click();
  await combo.fill('Studio Nord');await combo.press('Enter');
- await page.locator('#create-priority').selectOption('A');await page.locator('#create-due').fill('2026-10-01');await page.locator('#create-notes').fill('Briefing aus der E-Mail.');
+ await page.locator('#create-due').fill('2026-10-01');await page.locator('#create-notes').fill('Briefing aus der E-Mail.');
  await page.getByRole('button',{name:'Hinzufügen',exact:true}).click();
  await page.locator('.task-title').filter({hasText:'Entwurf abstimmen'}).waitFor();
  assert.equal(await page.locator('.task-title').filter({hasText:'Entwurf abstimmen'}).textContent(),'Entwurf abstimmen');
