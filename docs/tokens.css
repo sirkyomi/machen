@@ -1,0 +1,24 @@
+:root {
+  --color-paper: #fafbfd;
+  --color-surface: #ffffff;
+  --color-ink: #24344c;
+  --color-muted: #647187;
+  --color-line: #dfe5ee;
+  --color-soft: #edf2fb;
+  --color-slate: #1e2531;
+  --color-accent: #315ed3;
+  --color-accent-strong: #254cab;
+  --color-on-accent: #ffffff;
+  --color-focus: #315ed3;
+  --font-display: Public, "Segoe UI", sans-serif;
+  --font-body: Public, "Segoe UI", sans-serif;
+  --font-mono: "Cascadia Mono", "SFMono-Regular", monospace;
+  --text-xs: .75rem; --text-sm: .875rem; --text-base: 1rem; --text-md: 1.25rem; --text-display: clamp(2.75rem, 5vw + 1rem, 4.75rem);
+  --tracking-tight: -.025em; --tracking-display: -.04em;
+  --space-2xs: .25rem; --space-xs: .5rem; --space-sm: .75rem; --space-md: 1rem; --space-lg: 1.5rem; --space-xl: 2rem; --space-2xl: 3rem; --space-3xl: 4.5rem; --space-4xl: 6rem;
+  --layout-width: 72rem; --rule: 1px; --focus-width: 2px; --radius: .375rem;
+  --duration-fast: 140ms; --ease-standard: cubic-bezier(.2, .7, .3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --color-paper: #171c25; --color-surface: #202733; --color-ink: #e4eaf4; --color-muted: #a5b2c7; --color-line: #344052; --color-soft: #263656; --color-slate: #121720; --color-accent: #82a5f5; --color-accent-strong: #a9c1ff; --color-focus: #b9cbff; }
+}
