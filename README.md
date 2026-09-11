@@ -1,50 +1,44 @@
 # Machen
 
-**A calm, local task app built around `todo.txt`.**
+**A calm, local task app built around [`todo.txt`](https://github.com/todotxt/todo.txt).**
 
-Machen keeps your tasks in files you own. There is no account, no cloud service to sign up for, and no lock-in. Capture a thought from anywhere, plan your day, and keep the detail out of the way until you need it.
+Machen keeps tasks in files you own. There is no account, cloud service, or lock-in. Capture a task, plan your day, and open the details only when you need them.
 
-<p>
-  <a href="https://github.com/sirkyomi/machen/releases/latest">
-    <img src="https://img.shields.io/badge/Download%20Machen-Latest%20release-4f7df3?style=for-the-badge" alt="Download Machen">
-  </a>
-</p>
+[Website and FAQ](https://sirkyomi.github.io/machen/)
 
-[Windows installer](https://github.com/sirkyomi/machen/releases/latest/download/machen-win-x64-Setup.exe) · [macOS installer](https://github.com/sirkyomi/machen/releases/latest/download/machen-osx-arm64-Setup.pkg) · [Linux AppImage](https://github.com/sirkyomi/machen/releases/latest/download/machen-linux-x64.AppImage)
+## Download
 
-> The current macOS build is for Apple Silicon. Windows, macOS, and Linux packages are unsigned at the moment, so your operating system may ask for confirmation during installation.
+[Download for Windows](https://github.com/sirkyomi/machen/releases/latest/download/machen-win-x64-Setup.exe)
 
-## Your day, in one place
+[Download for macOS](https://github.com/sirkyomi/machen/releases/latest/download/machen-osx-arm64-Setup.pkg)
 
-![Machen's daily view in English](docs/screenshots/today.png)
+[Download for Linux](https://github.com/sirkyomi/machen/releases/latest/download/machen-linux-x64.AppImage)
 
-The daily view brings together what is due today and any unfinished work carried over from earlier days. Use the week strip to plan ahead, jump to a date, or search and filter tasks by project, context, priority, and due date.
+The current macOS package is for Apple Silicon. Windows, macOS, and Linux packages are unsigned, so your operating system may ask for confirmation during installation.
 
-Projects and contexts appear as compact chips, so the list stays easy to scan. Mark a task complete with one click, then archive completed work to `done.txt` when you are ready.
+## Your day in one place
 
-## Capture from anywhere
+![Machen showing today's task list](docs/screenshots/today.png)
 
-![Expanded quick capture](docs/screenshots/quick-capture.png)
+Machen puts today's work first. The weekly date strip helps you plan ahead, while projects, contexts, due dates, and priority groups keep the list easy to scan. Tasks with a priority are grouped from A to Z, then ordered by due date.
 
-Press `Ctrl+Shift+Space` on Windows and Linux, or `Cmd+Shift+Space` on macOS, to open Quick Capture even while Machen is in the background. The shortcut can be changed in Settings.
+Use the command palette to move quickly through views and actions. Quick Capture opens from anywhere with `Ctrl+Shift+Space` on Windows and Linux, or `Cmd+Shift+Space` on macOS. The shortcut can be changed in Settings.
 
-Start with a task title and press the arrow to reveal project, context, priority, due date, and notes. The popup hides when you click away or press Escape, while unfinished text is kept for the next time you open it.
+## Details without clutter
 
-Tasks created for a future day stay on that day. A due date is separate from the day a task is planned for.
+![Machen task details with subtasks](docs/screenshots/quick-capture.png)
 
-## Details when they matter
+Open a task to add notes, a due date and time, priority, projects, contexts, attachments, and a small checklist of subtasks. The dialog stays focused on one task and closes after saving.
 
-Select an existing task to add notes, paste email context, set a due date or priority, and attach files. These details stay out of the daily list until you need them.
-
-The **History** view lets you revisit a day and see what was added, completed, edited, archived, or restored. The **Archive** keeps finished tasks available without cluttering your working list.
+Due-date reminders can notify you at a selected time. You can postpone a reminder for ten minutes, one hour, or until tomorrow. The History and Archive views keep completed work available without crowding today's list.
 
 ## Fits your setup
 
-![Settings in dark mode](docs/screenshots/settings.png)
+![Machen settings](docs/screenshots/settings.png)
 
-Machen supports English and German, plus light, dark, and system themes. It can stay available in the system tray after you close the main window, and can launch at sign-in on Windows and macOS.
+Machen supports English and German, light, dark, and system themes. It can stay available in the system tray after the main window closes, launch at sign-in on Windows and macOS, and show a freely movable pinned-task panel above other windows.
 
-Choose a storage folder on first launch. You can use a normal local folder or one managed by your preferred sync service. Changing the folder in Settings opens that folder; it does not move your existing data.
+Choose a storage folder on first launch. It can be a normal local folder or a folder managed by your preferred sync service. Changing the folder in Settings opens that folder and never moves existing files.
 
 ## Your files stay yours
 
@@ -59,14 +53,14 @@ x 2026-09-10 2026-09-09 Send proposal +Work @email due:2026-09-11 pri:A id:UUID
 | --- | --- |
 | `todo.txt` | Active tasks and completed tasks that have not been archived |
 | `done.txt` | Archived completed tasks |
-| `metadata/.machen.json` | Notes, due times, reminders, subtasks and attachment references |
+| `metadata/.machen.json` | Notes, due times, reminders, subtasks, and attachment references |
 | `metadata/events.json` | Activity history |
 | `metadata/attachments/` | Copies of files attached to tasks |
 | `backups/todo.txt.bak`, `backups/done.txt.bak` | The state before the latest write |
 
 Projects use `+Project`; contexts use `@context`. Machen stores due dates as `due:YYYY-MM-DD`, priority as `pri:A`, and planned days as `t:YYYY-MM-DD`. These additions retain todo.txt compatibility. Keep the `id:` field when editing files in another app so notes, attachments, and history remain connected to the right task.
 
-Machen reloads external edits when it regains focus and every 30 seconds. Avoid writing to the same files from multiple apps at the exact same time; sync services may create conflict copies.
+Machen reloads external edits when it regains focus and every 30 seconds. Avoid writing to the same files from multiple apps at the exact same time because sync services can create conflict copies.
 
 ## Updates
 
