@@ -46,12 +46,21 @@ function syncQuickHeight() {
 function applyTheme() {
   const preference = state?.settings.theme || 'system';
   document.documentElement.dataset.theme = preference === 'system' ? systemTheme.matches ? 'dark' : 'light' : preference;
+  document.documentElement.dataset.palette = state?.settings.accent || 'graphite';
   document.querySelectorAll('[data-theme]').forEach(b => {
     if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(b.dataset.theme === preference));
+  });
+  document.querySelectorAll('[data-palette]').forEach(b => {
+    if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(b.dataset.palette === (state?.settings.accent || 'graphite')));
   });
 }
 function themePicker() {
   return `<div class="theme-picker" role="group" aria-label="${tr("Erscheinungsbild")}">${[['light', tr("Hell")], ['dark', tr("Dunkel")], ['system', tr("System")]].map(([value, label]) => `<button type="button" data-theme="${value}" aria-label="${label}" title="${label}" aria-pressed="${(state?.settings.theme || 'system') === value}">${icon(value)}<span>${label}</span></button>`).join('')}</div>`;
+}
+function palettePicker() {
+  const palettes = [['graphite', tr('Graphit')], ['blue', tr('Blau')], ['violet', tr('Violett')], ['emerald', tr('Smaragd')], ['coral', tr('Koralle')]];
+  const selected = state?.settings.accent || 'graphite';
+  return `<div class="palette-picker" role="group" aria-label="${tr('Akzentfarbe')}">${palettes.map(([value, label]) => `<button type="button" class="palette-${value}" data-palette="${value}" aria-label="${label}" title="${label}" aria-pressed="${String(selected === value)}"><span aria-hidden="true"></span>${label}</button>`).join('')}</div>`;
 }
 systemTheme.addEventListener('change', applyTheme);
 function toast(message) {
@@ -123,7 +132,7 @@ function group(title, tasks, empty = '') {
 function settingsContent() {
   const tab = (name, label) => `<button type="button" role="tab" data-settings-tab="${name}" aria-selected="${settingsTab === name}" tabindex="${settingsTab === name ? 0 : -1}">${label}${name === 'updates' ? '<span class="notification-dot" data-updates-tab-dot hidden aria-hidden="true"></span>' : ''}</button>`;
   const pane = (name, content) => `<section class="settings-pane" role="tabpanel" ${settingsTab === name ? '' : 'hidden'}>${content}</section>`;
-  const general = `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p>${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}`;
+  const general = `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p>${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}<h2>${tr("Akzentfarbe")}</h2><p>${tr("Gilt für Schaltflächen, Auswahl und Hervorhebungen.")}</p>${palettePicker()}`;
   const sidebar = `<h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p>${settingsSwitch('showProjects', state.settings.showProjects, tr("Projekte in der Seitenleiste anzeigen"))}${settingsSwitch('showContexts', state.settings.showContexts, tr("Kontexte in der Seitenleiste anzeigen"))}`;
   const capture = `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p>${settingsSwitch('autoStart', state.settings.autoStart, tr("Bei der Anmeldung starten (Windows / macOS)"))}`;
   return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('sidebar', tr("Seitenleiste"))}${tab('pinned', tr("Angeheftete Aufgaben"))}${tab('capture', tr("Schnellerfassung"))}${tab('updates', tr("Updates"))}</div><form id="settings-form">${pane('general', general)}${pane('sidebar', sidebar)}${pane('pinned', pinSettings())}${pane('capture', capture)}${pane('updates', '<section data-update-settings></section>')}</form></div>`;
@@ -437,6 +446,11 @@ root.addEventListener('click', async e => {
         theme: b.dataset.theme
       });
       state.settings.theme = b.dataset.theme;
+      applyTheme();
+    }
+    if (b.dataset.palette) {
+      await call('accent', {accent: b.dataset.palette});
+      state.settings.accent = b.dataset.palette;
       applyTheme();
     }
     const a = b.dataset.action;
