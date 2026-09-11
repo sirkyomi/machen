@@ -18,7 +18,7 @@
   'Machen wird neu gestartet. Nicht gespeicherte Eingaben in beiden Fenstern werden verworfen. Speichere sie vorher oder wähle Abbrechen.':'Machen will restart. Unsaved changes in both windows will be discarded. Save them first or choose Cancel.',
   'Update konnte nicht installiert werden.':'Could not install the update.',
   'Datum wählen':'Choose date','Vorheriger Monat':'Previous month','Nächster Monat':'Next month',
-  'Heute':'Today','Verlauf':'History','Alle Aufgaben':'All tasks','Archiv':'Archive','Einstellungen':'Settings',
+  'Heute':'Today','Verlauf':'History','Alle Aufgaben':'All tasks','Archiv':'Archive','Einstellungen':'Settings','Sammlungen':'Collections',
   'Erscheinungsbild':'Appearance','Hell':'Light','Dunkel':'Dark','System':'System','Sprache':'Language',
   'Wähle Hell, Dunkel oder die Einstellung deines Systems.':'Choose light, dark or your system setting.',
   'Akzentfarbe':'Accent color','Gilt für Schaltflächen, Auswahl und Hervorhebungen.':'Applies to buttons, selections and highlights.','Graphit':'Graphite','Blau':'Blue','Violett':'Violet','Smaragd':'Emerald','Koralle':'Coral',

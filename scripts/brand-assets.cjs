@@ -10,28 +10,26 @@ const distanceToSegment=(x,y,[ax,ay,bx,by])=>{
   return Math.hypot(x-(ax+t*dx),y-(ay+t*dy));
 };
 const markAt=(x,y)=>{
-  const radius=9,nearestX=clamp(x,radius,32-radius),nearestY=clamp(y,radius,32-radius);
-  const blue=Math.hypot(x-nearestX,y-nearestY)<=radius;
   const strokes=[[6,24,6,8],[6,8,16,18],[16,18,26,8],[26,8,26,17],[18,22,21.2,25],[21.2,25,28,18]];
-  return {blue,white:strokes.some(line=>distanceToSegment(x,y,line)<=1.325)};
+  return {white:strokes.some(line=>distanceToSegment(x,y,line)<=2)};
 };
 const crcTable=Uint32Array.from({length:256},(_,n)=>{for(let bit=0;bit<8;bit++)n=(n>>>1)^((n&1)?0xedb88320:0);return n>>>0;});
 const crc=value=>{let result=0xffffffff;for(const byte of value)result=crcTable[(result^byte)&255]^(result>>>8);return (result^0xffffffff)>>>0;};
 const chunk=(name,data)=>{const type=Buffer.from(name),head=Buffer.alloc(8),tail=Buffer.alloc(4);head.writeUInt32BE(data.length,0);type.copy(head,4);tail.writeUInt32BE(crc(Buffer.concat([type,data])),0);return Buffer.concat([head,data,tail]);};
-const png=size=>{
+const png=(size,[red,green,blue])=>{
   const samples=4,row=Buffer.alloc(1+size*4),pixels=[];
   for(let py=0;py<size;py++){
     row.fill(0);row[0]=0;
     for(let px=0;px<size;px++){
-      let blue=0,white=0;
+      let white=0;
       for(let sy=0;sy<samples;sy++)for(let sx=0;sx<samples;sx++){
         const point=markAt((px+(sx+.5)/samples)*32/size,(py+(sy+.5)/samples)*32/size);
-        if(point.white)white++;else if(point.blue)blue++;
+        if(point.white)white++;
       }
-      const at=1+px*4,coverage=(blue+white)/(samples*samples);
-      row[at]=Math.round((82*blue+255*white)/(samples*samples));
-      row[at+1]=Math.round((127*blue+255*white)/(samples*samples));
-      row[at+2]=Math.round((234*blue+255*white)/(samples*samples));
+      const at=1+px*4,coverage=white/(samples*samples);
+      row[at]=Math.round(red*coverage);
+      row[at+1]=Math.round(green*coverage);
+      row[at+2]=Math.round(blue*coverage);
       row[at+3]=Math.round(coverage*255);
     }
     pixels.push(Buffer.from(row));
@@ -45,6 +43,14 @@ const ico=entries=>{
   return Buffer.concat([header,...directory,...entries.map(entry=>entry.data)]);
 };
 
-const entries=[16,32,48,256].map(size=>({size,data:png(size)}));
-fs.writeFileSync(path.join(root,'assets','tray.png'),entries[1].data);
-fs.writeFileSync(path.join(root,'assets','app.ico'),ico(entries));
+const sizes=[16,32,48,256];
+const writeVariant=(name,color)=>{
+  const entries=sizes.map(size=>({size,data:png(size,color)}));
+  fs.writeFileSync(path.join(root,'assets',`tray-${name}.png`),entries[1].data);
+  fs.writeFileSync(path.join(root,'assets',`app-${name}.ico`),ico(entries));
+  return entries;
+};
+const lightEntries=writeVariant('light',[53,66,80]);
+writeVariant('dark',[220,228,237]);
+fs.writeFileSync(path.join(root,'assets','tray.png'),lightEntries[1].data);
+fs.writeFileSync(path.join(root,'assets','app.ico'),ico(lightEntries));

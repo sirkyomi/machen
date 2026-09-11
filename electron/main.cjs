@@ -55,23 +55,14 @@ const defaults = {
   theme: 'system',
   language: 'de'
 };
-const iconAccents = {
-  graphite: {light: '#56636f', dark: '#9aafc4'},
-  blue: {light: '#315ed3', dark: '#527fea'},
-  violet: {light: '#6f5bb4', dark: '#b4a1e6'},
-  emerald: {light: '#32836e', dark: '#78c3a9'},
-  coral: {light: '#b86975', dark: '#d7a0a8'}
-};
-function brandIcon() {
-  const palette = iconAccents[settings?.accent] || iconAccents.graphite;
-  const color = palette[nativeTheme.shouldUseDarkColors ? 'dark' : 'light'];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="${color}"/><path d="M6 24V8l10 10L26 8v9M18 22l3.2 3L28 18" fill="none" stroke="#fff" stroke-width="2.65" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`);
+function iconPath(kind, extension) {
+  const variant = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+  return path.join(__dirname, `../assets/${kind}-${variant}.${extension}`);
 }
-function updateBrandIcons() {
-  const icon = brandIcon();
-  tray?.setImage(icon);
-  for (const w of [main, quick, pinned]) w?.setIcon(icon);
+function updateIcons() {
+  const trayIcon = nativeImage.createFromPath(iconPath('tray', 'png'));
+  if (!trayIcon.isEmpty()) tray?.setImage(trayIcon);
+  for (const w of [main, quick, pinned]) w?.setIcon(iconPath('app', 'ico'));
 }
 function saveSettings() {
   fs.mkdirSync(path.dirname(configFile), {
@@ -105,7 +96,7 @@ function windowFor(kind = 'main') {
     hasShadow: true,
     alwaysOnTop: isQuick || isPinned,
     skipTaskbar: isQuick || isPinned,
-    icon: path.join(__dirname, '../assets/app.ico'),
+    icon: iconPath('app', 'ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -239,10 +230,11 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
     main.once('ready-to-show', showMain);
     if (settings.pinEnabled && store) pinned.once('ready-to-show', showPinned);
     if (!registerShortcut(settings.shortcut)) shortcutError = 'Der globale Shortcut ist belegt. Bitte in den Einstellungen \u00e4ndern.';
-    tray = new Tray(brandIcon());
+    const icon = nativeImage.createFromPath(iconPath('tray', 'png'));
+    tray = new Tray(icon);
     tray.setToolTip('Machen');
     tray.on('click',showMain);
-    nativeTheme.on('updated', updateBrandIcons);
+    nativeTheme.on('updated', updateIcons);
     updateMenus();
     updates = new Updates({version:app.getVersion(), createManager:()=>{
       if(!app.isPackaged || process.env.MACHEN_TEST_HOME)throw Error('Development build');
@@ -277,7 +269,7 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         settings.theme = data.theme;
         saveSettings();
         nativeTheme.themeSource = data.theme;
-        updateBrandIcons();
+        updateIcons();
         broadcast();
         return true;
       }
@@ -316,7 +308,6 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         if (!['graphite', 'blue', 'violet', 'emerald', 'coral'].includes(data.accent)) throw Error(tr('Unbekannte Akzentfarbe.'));
         settings.accent = data.accent;
         saveSettings();
-        updateBrandIcons();
         broadcast();
         return true;
       }

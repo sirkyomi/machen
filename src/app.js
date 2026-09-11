@@ -91,19 +91,19 @@ async function refresh() {
   if (!dirty && changed && (!quick || !root.children.length)) render();
 }
 function brand() {
-  return `<div class="brand" aria-label="Machen"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 24V8l10 10L26 8v9"/><path d="m18 22 3.2 3L28 18"/></svg></span><span class="brand-name">Machen</span></div>`;
+  return `<div class="brand" aria-label="Machen"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M6 24V8l10 10L26 8v9"/><path d="m18 22 3.2 3L28 18"/></svg></span></div>`;
 }
 function nav(name, label) {
   const updateDot = name === 'settings' ? '<span class="notification-dot" data-settings-update-dot hidden aria-hidden="true"></span>' : '';
   return `<button class="nav ${view === name ? 'active' : ''}" data-view="${name}">${icon(name)}<span>${label}</span>${updateDot}${name === 'today' ? `<span class="count">${state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).length}</span>` : ''}</button>`;
 }
-function sidebarList(kind, label, items) {
+function sidebarCollection(kind, label, items) {
   const selectedValue = kind === 'project' ? project : context;
   const active = kind === 'project' ? view === 'project' : view === 'context';
   const empty = kind === 'project' ? tr("Noch keine Projekte") : tr("Noch keine Kontexte");
   const chip = kind === 'project' ? projectChip : contextChip;
   const attr = kind === 'project' ? 'data-project' : 'data-context';
-  return `<section class="sidebar-list"><p class="projects">${label}</p><div class="sidebar-list-items">${items.length ? items.map(item => `<button class="project ${kind} ${active && selectedValue === item ? 'active' : ''}" ${attr}="${escapeHtml(item)}">${chip(item)}</button>`).join('') : `<small class="project muted">${empty}</small>`}</div></section>`;
+  return `<section class="sidebar-collection"><p class="collection-label">${label}</p><div class="sidebar-list-items">${items.length ? items.map(item => `<button class="project ${kind} ${active && selectedValue === item ? 'active' : ''}" ${attr}="${escapeHtml(item)}">${chip(item)}</button>`).join('') : `<small class="project muted">${empty}</small>`}</div></section>`;
 }
 function week() {
   const current = new Date(day + 'T12:00:00');
@@ -277,7 +277,8 @@ function render() {
     return;
   }
   const projects = openProjects(), contexts = openContexts();
-  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
+  const collections = `${state.settings.showProjects ? sidebarCollection('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarCollection('context', tr("Kontexte"), contexts) : ''}`;
+  root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}"><div class="sidebar-navigation"><section class="sidebar-section">${nav('today', tr("Heute"))}${nav('all', tr("Alle Aufgaben"))}</section><section class="sidebar-section sidebar-secondary">${nav('history', tr("Verlauf"))}${nav('archive', tr("Archiv"))}</section></div>${collections ? `<div class="sidebar-lists"><section class="sidebar-collections"><p class="projects">${tr("Sammlungen")}</p>${collections}</section></div>` : ''}<div class="bottom">${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
   paintRanges(root);
   restoreComposer(draft);
   enhanceControls();
