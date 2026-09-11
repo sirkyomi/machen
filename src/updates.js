@@ -23,4 +23,4 @@ document.addEventListener('click',async e=>{
   }catch(err){toast(tr(err.message));}finally{paintUpdates();}
 });
 window.api.onUpdate(next=>{updateState=next;paintUpdates();});
-window.api.call('update:state').then(next=>{updateState=next;paintUpdates();}).catch(()=>{});
+if(!new URLSearchParams(location.search).has('quick')&&!new URLSearchParams(location.search).has('pinned'))window.api.call('update:state').then(next=>{updateState=next;paintUpdates();}).catch(()=>{});

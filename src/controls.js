@@ -20,7 +20,7 @@ function enhanceControls(){
   const wrapper=document.createElement('span');wrapper.className='control-wrapper';source.before(wrapper);wrapper.append(source);
   const button=document.createElement('button');button.type='button';button.className='custom-control';
   button.setAttribute('role','combobox');button.setAttribute('aria-haspopup',source.tagName==='SELECT'?'listbox':'dialog');button.setAttribute('aria-expanded','false');
-  button.innerHTML=`<span class="control-value"></span>${icon(source.tagName==='SELECT'?'down':'today')}`;wrapper.append(button);syncControl(source);
+  button.innerHTML=`<span class="control-value"></span>${icon(source.type==='date'?'today':'down')}`;wrapper.append(button);syncControl(source);
   button.addEventListener('click',()=>openControl(source,button));
   button.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();openControl(source,button);}});
   source.addEventListener('change',()=>syncControl(source));
@@ -38,7 +38,7 @@ function openControl(source,button){
  if(controlOwner===button){closeControl(true);return;}
  closeControl();controlSource=source;controlOwner=button;
  const pop=document.createElement('div');pop.className='control-popover';pop.id='control-popover-'+(++controlCounter);
- button.setAttribute('aria-controls',pop.id);button.setAttribute('aria-expanded','true');document.body.append(pop);controlPopover=pop;
+ button.setAttribute('aria-controls',pop.id);button.setAttribute('aria-expanded','true');(source.closest('dialog')||document.body).append(pop);controlPopover=pop;
  if(source.tagName==='SELECT'){
   pop.setAttribute('role','listbox');pop.setAttribute('aria-label',controlLabel(source));
   for(const option of source.options){const item=document.createElement('button');item.type='button';item.className='menu-option';item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));item.disabled=option.disabled;item.textContent=option.textContent;item.addEventListener('click',()=>commitControl(option.value));pop.append(item);}

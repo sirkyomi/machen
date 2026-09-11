@@ -10,7 +10,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await app.firstWindow();let page;for(let i=0;i<100&&!page;i++){page=app.windows().find(w=>w.url().includes('index.html')&&!w.url().includes('quick=1'));if(!page)await new Promise(r=>setTimeout(r,50));}
   fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/english-today.png'});
   await page.getByRole('button',{name:'Settings',exact:true}).click();
-  await page.locator('[data-settings-tab="appearance"]').click();
+  await page.locator('[data-settings-tab="general"]').click();
   const language=page.locator('.settings').getByRole('combobox',{name:'Sprache / Language',exact:true});
   await language.click();await page.getByRole('option',{name:'Deutsch',exact:true}).click();
   await page.getByRole('heading',{name:'Einstellungen',exact:true}).waitFor();
@@ -31,6 +31,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await quick.getByRole('combobox',{name:'Due date',exact:true}).click();await quick.getByRole('button',{name:'Next month'}).click();
   const date=await quick.locator('.calendar-day[data-outside=false]').nth(14).getAttribute('data-date');
   await quick.locator('.calendar-day[data-outside=false]').nth(14).click();
+  await quick.getByRole('combobox',{name:'Hours',exact:true}).click();await quick.getByRole('option',{name:'14',exact:true}).click();
+  await quick.getByRole('combobox',{name:'Minutes',exact:true}).click();await quick.getByRole('option',{name:'30',exact:true}).click();
   await quick.getByRole('combobox',{name:'Due date',exact:true}).click();await quick.keyboard.press('Escape');
   assert.equal(await quick.getByRole('dialog').count(),0);assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).isVisible()),true);
   await quick.locator('#create-notes').fill('Extra context');await quick.screenshot({path:'test-results/modern-quick-expanded.png'});
@@ -40,7 +42,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   await quick.getByRole('button',{name:'Capture',exact:true}).click();
   for(let i=0;i<100;i++){if(await app.evaluate(({BrowserWindow})=>!BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).isVisible()))break;await new Promise(r=>setTimeout(r,30));}
   const task=(await page.evaluate(()=>window.api.call('state'))).tasks.find(t=>t.title.startsWith('Capture with details'));
-  assert.ok(task);assert.match(task.title,/\+Work @NewContext/);assert.equal(task.priority,'B');assert.equal(task.due,date);assert.equal(task.notes,'Extra context');
+  assert.ok(task);assert.match(task.title,/\+Work @NewContext/);assert.equal(task.priority,'B');assert.equal(task.due,date);assert.equal(task.dueTime,'14:30');assert.equal(task.notes,'Extra context');
   await page.evaluate(()=>window.api.call('quick'));for(let i=0;i<100&&(await bounds()).height!==small.height;i++)await new Promise(r=>setTimeout(r,30));assert.equal((await bounds()).height,small.height);assert.equal(await quick.locator('input[name=title]').inputValue(),'');
   console.log('PASS custom language/priority/calendar controls, calendar Escape, quick resize/collapse, draft and metadata persistence');
  }finally{if(app)await app.close();fs.rmSync(home,{recursive:true,force:true});}

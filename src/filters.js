@@ -19,6 +19,7 @@ function filterBar() {
     return [p, p];
   })], taskFilters.priority)}</select></label>
  <label>${tr("Fälligkeit")}<select data-filter="due" aria-label="${tr("Nach Fälligkeit filtern")}">${options([['', tr("Jeder Termin")], ['overdue', tr("Überfällig")], ['today', tr("Heute fällig")], ['week', tr("Nächste 7 Tage")], ['none', tr("Ohne Termin")]], taskFilters.due)}</select></label>
+ <label>${tr("Sortierung")}<select data-sort aria-label="${tr("Aufgaben sortieren")}">${options([['manual', tr("Manuell")], ['priority', tr("Nach Priorität")], ['due', tr("Nach Fälligkeit")]], state.settings.taskSort || 'manual')}</select></label>
  ${hasFilters() ? `<button data-action="resetFilters">${tr("Zurücksetzen")}</button>` : ''}</div>`;
 }
 function matchesFilters(t) {
@@ -35,9 +36,13 @@ function matchesFilters(t) {
   return true;
 }
 function searchMatches(t) {
-  return [displayTitle(t.title), ...taskProjects(t.title), ...taskContexts(t.title)].join(' ').toLowerCase().includes(query.trim().toLowerCase());
+  return [displayTitle(t.title), ...taskProjects(t.title), ...taskContexts(t.title), ...(t.subtasks || []).map(item => item.title)].join(' ').toLowerCase().includes(query.trim().toLowerCase());
 }
-document.addEventListener('change', e => {
+document.addEventListener('change', async e => {
+  if (e.target.hasAttribute('data-sort')) {
+    try { await call('taskSort', {sort: e.target.value}); state.settings.taskSort = e.target.value; render(); } catch (error) { toast(error.message); }
+    return;
+  }
   if (e.target.dataset.filter) {
     taskFilters[e.target.dataset.filter] = e.target.value;
     render();

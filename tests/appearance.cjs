@@ -14,7 +14,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
  try{
 
-  app=await electron.launch({args:['.'],env:{...process.env,MACHEN_TEST_HOME:home}});const page=await app.firstWindow();
+  app=await electron.launch({args:['.'],env:{...process.env,MACHEN_TEST_HOME:home}});await app.firstWindow();let page;for(let i=0;i<100&&!page;i++){page=app.windows().find(w=>w.url().includes('index.html')&&!w.url().includes('quick=1')&&!w.url().includes('pinned=1'));if(!page)await new Promise(r=>setTimeout(r,50));}
 
   await page.getByText('Angebot für Studio Nord',{exact:true}).click();
 
@@ -24,9 +24,9 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
    await page.waitForTimeout(100);
 
-   const bounds=await page.evaluate(()=>({right:document.querySelector('.panel').getBoundingClientRect().right,width:innerWidth,scroll:document.documentElement.scrollWidth,content:document.querySelector('.workspace-content').getBoundingClientRect().width}));
+   const bounds=await page.evaluate(()=>{const rect=document.querySelector('.task-dialog').getBoundingClientRect();return {left:rect.left,right:rect.right,dialogWidth:rect.width,width:innerWidth,scroll:document.documentElement.scrollWidth,content:document.querySelector('.workspace-content').getBoundingClientRect().width};});
 
-   assert.equal(bounds.width,width);assert.ok(Math.abs(bounds.right-bounds.width)<2,JSON.stringify(bounds));assert.equal(bounds.scroll,bounds.width);assert.ok(bounds.content<=1241);
+   assert.equal(bounds.width,width);assert.ok(Math.abs((bounds.left+bounds.right)/2-bounds.width/2)<2,JSON.stringify(bounds));assert.ok(bounds.dialogWidth<=761,JSON.stringify(bounds));assert.equal(bounds.scroll,bounds.width);assert.ok(bounds.content<=1241);
 
   }
 
@@ -36,7 +36,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
   await page.locator('#notes').fill('Dieser Entwurf darf beim Themewechsel nicht verschwinden.');
 
-  await page.getByRole('button',{name:'Dunkel',exact:true}).click();
+  await page.evaluate(()=>window.api.call('theme',{theme:'dark'}));
 
   await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
 
@@ -46,7 +46,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
 
-  await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w!==page);
+  await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
 
   await quick.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
 
@@ -60,7 +60,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
   await quick.getByRole('textbox',{name:'Neue Aufgabe'}).fill('Ein ungespeicherter Gedanke');
 
-  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>!w.webContents.getURL().includes('quick=1')).focus());
+  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>!w.webContents.getURL().includes('quick=1')&&!w.webContents.getURL().includes('pinned=1')).focus());
 
   await page.waitForTimeout(200);
 
@@ -76,13 +76,13 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');cons
 
   assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('quick=1')).isVisible()),false);
 
-  await page.getByRole('button',{name:'Hell',exact:true}).click();
+  await page.evaluate(()=>window.api.call('theme',{theme:'light'}));
 
   await quick.waitForFunction(()=>document.documentElement.dataset.theme==='light');
 
   assert.equal(await quick.getByRole('textbox',{name:'Neue Aufgabe'}).inputValue(),'Ein ungespeicherter Gedanke');
 
-  await page.getByRole('button',{name:'Dunkel',exact:true}).click();
+  await page.evaluate(()=>window.api.call('theme',{theme:'dark'}));
 
   await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
 

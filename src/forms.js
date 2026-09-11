@@ -86,6 +86,10 @@ function taskFormData(form) {
   const pickers = [...form.querySelectorAll('.project-picker')];
   for (const picker of pickers) pickProject(picker, picker.querySelector('[role=combobox]').value);
   const data = Object.fromEntries(new FormData(form));
+  data.dueTime = data.due && data.dueHour ? `${data.dueHour}:${data.dueMinute || '00'}` : '';
+  delete data.dueHour;
+  delete data.dueMinute;
+  if (form.id === 'detail-form') data.subtasks = [...form.querySelectorAll('[data-subtask-id]')].map(row => ({id: row.dataset.subtaskId, title: row.querySelector('input[type=text]').value.trim(), done: row.querySelector('input[type=checkbox]').checked})).filter(item => item.title);
   if (!displayTitle(data.title || '').trim()) throw Error(tr("Bitte einen Aufgabentitel eingeben."));
   const projects = [...new Set([...taskProjects(data.title), ...JSON.parse(data.projects || '[]')])];
   const contexts = [...new Set([...taskContexts(data.title), ...JSON.parse(data.contexts || '[]')])];
@@ -93,9 +97,9 @@ function taskFormData(form) {
   return data;
 }
 function createComposer(quickMode = false) {
-  return `<form id="${quickMode?'quick-form':'composer'}" class="composer composer-expandable"><div class="composer-line"><button type="button" class="expand-composer" data-action="expandComposer" aria-label="${tr("Aufgabendetails ausklappen")}" aria-expanded="false" aria-controls="composer-details">${icon('down')}</button><input name="title" aria-label="${tr("Neue Aufgabe")}" placeholder="${tr("Was möchtest du erledigen?")}" required maxlength="2000" autocomplete="off"><button class="primary" type="submit">${tr(quickMode?"Erfassen":"Hinzufügen")}</button></div><div id="composer-details" hidden>${projectPicker('create', view === 'project' ? [project] : [])}${contextPicker('create-context', view === 'context' ? [context] : [])}<div class="fields"><div><label for="create-priority">${tr("Priorität")}</label><select id="create-priority" name="priority"><option value="">${tr("Keine")}</option>${Array.from({
+  return `<form id="${quickMode?'quick-form':'composer'}" class="composer composer-expandable"><div class="composer-line"><button type="button" class="expand-composer" data-action="expandComposer" aria-label="${tr("Aufgabendetails ausklappen")}" aria-expanded="false" aria-controls="composer-details">${icon('down')}</button><input name="title" aria-label="${tr("Neue Aufgabe")}" placeholder="${tr("Was möchtest du erledigen?")}" required maxlength="2000" autocomplete="off"><button class="primary" type="submit">${tr(quickMode?"Erfassen":"Hinzufügen")}</button></div><div id="composer-details" hidden>${projectPicker('create', view === 'project' ? [project] : [])}${contextPicker('create-context', view === 'context' ? [context] : [])}<div class="fields task-due-fields"><div><label for="create-priority">${tr("Priorität")}</label><select id="create-priority" name="priority"><option value="">${tr("Keine")}</option>${Array.from({
     length: 26
-  }, (_, i) => `<option>${String.fromCharCode(65 + i)}</option>`).join('')}</select></div><div><label for="create-due">${tr("Fällig am")}</label><input id="create-due" type="date" name="due"></div></div><label for="create-notes">${tr("Notizen & E-Mail-Kontext")}</label><textarea id="create-notes" name="notes" placeholder="${tr("Optionaler Kontext zur Aufgabe")}"></textarea></div></form>`;
+  }, (_, i) => `<option>${String.fromCharCode(65 + i)}</option>`).join('')}</select></div><div><label for="create-due">${tr("Fällig am")}</label><input id="create-due" type="date" name="due"></div><div><label for="create-due-time">${tr("Uhrzeit")}</label>${taskDueTimePicker('', 'create-due-time')}</div></div><label for="create-notes">${tr("Notizen & E-Mail-Kontext")}</label><textarea id="create-notes" name="notes" placeholder="${tr("Optionaler Kontext zur Aufgabe")}"></textarea></div></form>`;
 }
 function captureComposer() {
   const form = document.querySelector('#composer,#quick-form');

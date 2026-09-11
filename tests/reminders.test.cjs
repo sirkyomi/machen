@@ -1,0 +1,20 @@
+const assert = require('node:assert/strict');
+const {dailyDueTasks, dueTasks, isValidReminderTime, localDay, localTime, shouldSendReminder, snoozedReminderTasks, taskReminderKey, timedReminderTasks} = require('../electron/reminders.cjs');
+
+const morning = new Date(2026, 8, 11, 9, 0);
+assert.equal(localDay(morning), '2026-09-11');
+assert.equal(localTime(morning), '09:00');
+assert.equal(isValidReminderTime('09:00'), true);
+assert.equal(isValidReminderTime('9:00'), false);
+assert.deepEqual(dueTasks([{due: '2026-09-10'}, {due: '2026-09-11'}, {due: '2026-09-12'}, {due: '2026-09-09', done: true}], '2026-09-11').map(task => task.due), ['2026-09-10', '2026-09-11']);
+assert.deepEqual(dailyDueTasks([{id:'old',due:'2026-09-10',dueTime:'08:00'}, {id:'timed',due:'2026-09-11',dueTime:'12:00'}, {id:'day',due:'2026-09-11',dueTime:''}], '2026-09-11').map(task=>task.id), ['old','day']);
+const timed={id:'timed',due:'2026-09-11',dueTime:'10:00'};
+assert.deepEqual(timedReminderTasks([timed],60,[],new Date(2026,8,11,9,0)).map(task=>task.id),['timed']);
+assert.deepEqual(timedReminderTasks([timed],60,[taskReminderKey(timed,60)],new Date(2026,8,11,9,30)),[]);
+const snoozed={id:'later',due:'2026-09-11',dueTime:'10:00',snoozedUntil:'2026-09-11T09:30:00.000Z'};
+assert.deepEqual(timedReminderTasks([snoozed],60,[],new Date('2026-09-11T09:30:00.000Z')),[]);
+assert.deepEqual(snoozedReminderTasks([snoozed],new Date('2026-09-11T09:30:00.000Z')).map(task=>task.id),['later']);
+assert.equal(shouldSendReminder({remindersEnabled: true, reminderTime: '09:00', reminderLastDay: ''}, morning), true);
+assert.equal(shouldSendReminder({remindersEnabled: true, reminderTime: '09:01', reminderLastDay: ''}, morning), false);
+assert.equal(shouldSendReminder({remindersEnabled: true, reminderTime: '09:00', reminderLastDay: '2026-09-11'}, morning), false);
+console.log('PASS reminder timing and due-task selection');

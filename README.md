@@ -59,9 +59,10 @@ x 2026-09-10 2026-09-09 Send proposal +Work @email due:2026-09-11 pri:A id:UUID
 | --- | --- |
 | `todo.txt` | Active tasks and completed tasks that have not been archived |
 | `done.txt` | Archived completed tasks |
-| `.machen.json` | Notes, attachment references, and activity history |
-| `attachments/` | Copies of files attached to tasks |
-| `todo.txt.bak`, `done.txt.bak` | The state before the latest write |
+| `metadata/.machen.json` | Notes, due times, reminders, subtasks and attachment references |
+| `metadata/events.json` | Activity history |
+| `metadata/attachments/` | Copies of files attached to tasks |
+| `backups/todo.txt.bak`, `backups/done.txt.bak` | The state before the latest write |
 
 Projects use `+Project`; contexts use `@context`. Machen stores due dates as `due:YYYY-MM-DD`, priority as `pri:A`, and planned days as `t:YYYY-MM-DD`. These additions retain todo.txt compatibility. Keep the `id:` field when editing files in another app so notes, attachments, and history remain connected to the right task.
 

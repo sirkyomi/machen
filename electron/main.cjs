@@ -8,6 +8,7 @@ const {
   Tray,
   Menu,
   nativeImage,
+  Notification,
   shell,
   screen,
   nativeTheme
@@ -22,10 +23,12 @@ const path = require('node:path');
 const {
   Store
 } = require('./store.cjs');
+const {dailyDueTasks, isValidReminderTime, localDay, shouldSendReminder, snoozedReminderTasks, taskReminderKey, timedReminderTasks} = require('./reminders.cjs');
 
 const dataHome = process.env.MACHEN_TEST_HOME || path.join(app.getPath('appData'), 'Machen');
 app.setPath('userData', dataHome);
 app.setName('Machen');
+if (process.platform === 'win32') app.setAppUserModelId('machen');
 app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
 let main,
   quick,
@@ -52,6 +55,12 @@ const defaults = {
   pinAutoHeight: true,
   pinCollapsed: false,
   pinEnabled: false,
+  remindersEnabled: false,
+  reminderTime: '09:00',
+  reminderLastDay: '',
+  reminderLeadMinutes: 60,
+  reminderTaskKeys: [],
+  taskSort: 'manual',
   theme: 'system',
   language: 'de'
 };
@@ -75,6 +84,63 @@ function saveSettings() {
 function broadcast() {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:changed');
 }
+function reminderTaskTitle(title) {
+  return String(title || '').replace(/\s(?:\+|@)[^\s]+/g, '').replace(/\s(?:due|pri|id):[^\s]+/g, '').trim();
+}
+function snoozeUntil(preset, now = new Date()) {
+  const result = new Date(now);
+  if (preset === '10m') result.setMinutes(result.getMinutes() + 10);
+  else if (preset === '1h') result.setHours(result.getHours() + 1);
+  else if (preset === 'tomorrow') {
+    const [hour, minute] = settings.reminderTime.split(':').map(Number);
+    result.setDate(result.getDate() + 1); result.setHours(hour, minute, 0, 0);
+  } else return '';
+  return result.toISOString();
+}
+function checkDueReminders() {
+  if (!store || !settings.remindersEnabled || !Notification.isSupported()) return;
+  const allTasks = store.snapshot().tasks;
+  let changed = false;
+  const notify = (tasks, title, body) => {
+    if (!tasks.length) return;
+    const presets = ['10m', '1h', 'tomorrow'];
+    const actions = [[presets[0], tr('10 Minuten')], [presets[1], tr('1 Stunde')], [presets[2], tr('Morgen')]].map(([, text]) => ({type: 'button', text}));
+    const notification = new Notification({title, body, silent: true, ...(process.platform === 'win32' || process.platform === 'darwin' ? {actions} : {})});
+    notification.on('click', () => { showMain(); main.webContents.send('app:openTask', tasks[0].id); });
+    notification.on('action', (details, legacyActionIndex) => {
+      const actionIndex = Number.isInteger(details?.actionIndex) ? details.actionIndex : legacyActionIndex;
+      const until = snoozeUntil(presets[actionIndex]);
+      if (!until) return;
+      try {
+        const currentIds = new Set(store.snapshot().tasks.filter(task => !task.done).map(task => task.id));
+        for (const task of tasks) if (currentIds.has(task.id)) store.setSnooze(task.id, until);
+        broadcast();
+      } catch (error) { console.error('Notification action failed:', error); }
+    });
+    notification.show();
+  };
+  const snoozedTasks = snoozedReminderTasks(allTasks);
+  if (snoozedTasks.length) {
+    notify(snoozedTasks, tr('Erinnerung'), snoozedTasks.length === 1 ? reminderTaskTitle(snoozedTasks[0].title) : tr('{count} Aufgaben warten auf dich.', {count: snoozedTasks.length}));
+    store.clearSnoozes(snoozedTasks.map(task => task.id));
+    broadcast();
+  }
+  if (shouldSendReminder(settings)) {
+    const tasks = dailyDueTasks(allTasks);
+    settings.reminderLastDay = localDay();
+    changed = true;
+    notify(tasks, tr('Fällige Aufgaben'), tasks.length === 1 ? reminderTaskTitle(tasks[0].title) : tr('{count} Aufgaben sind fällig.', {count: tasks.length}));
+  }
+  const sentKeys = Array.isArray(settings.reminderTaskKeys) ? settings.reminderTaskKeys : [];
+  const timedTasks = timedReminderTasks(allTasks, settings.reminderLeadMinutes, sentKeys);
+  if (timedTasks.length) {
+    settings.reminderTaskKeys = [...sentKeys, ...timedTasks.map(task => taskReminderKey(task, settings.reminderLeadMinutes))].slice(-200);
+    changed = true;
+    const body = timedTasks.length === 1 ? `${reminderTaskTitle(timedTasks[0].title)} · ${tr('Fällig um {time}', {time: timedTasks[0].dueTime})}` : tr('{count} Aufgaben werden bald fällig.', {count: timedTasks.length});
+    notify(timedTasks, tr('Fälligkeitserinnerung'), body);
+  }
+  if (changed) saveSettings();
+}
 function windowFor(kind = 'main') {
   const isQuick = kind === 'quick';
   const isPinned = kind === 'pinned';
@@ -86,7 +152,8 @@ function windowFor(kind = 'main') {
     show: false,
     title: isQuick ? tr("Aufgabe erfassen") : 'Machen',
     roundedCorners: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#171c25' : '#FAFBFD',
+    backgroundColor: isPinned ? '#00000000' : nativeTheme.shouldUseDarkColors ? '#171c25' : '#FAFBFD',
+    transparent: isPinned,
     autoHideMenuBar: true,
     resizable: !isQuick,
     minimizable: !isQuick && !isPinned,
@@ -142,7 +209,7 @@ function applyPinSettings() {
   pinned.setMaximumSize(Math.max(240, area.width - 32), Math.max(48, area.height - 32));
   pinned.setBounds(constrainedPinBounds(settings.pinBounds || undefined));
   pinned.webContents.setZoomFactor(settings.pinScale);
-  pinned.setOpacity(settings.pinOpacity);
+  pinned.setOpacity(1);
   pinUpdating = false;
 }
 function showPinned() {
@@ -243,6 +310,8 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
     // Check asynchronously after startup, then periodically; downloading stays manual.
     const initialUpdateCheck=setTimeout(()=>updates.check(),0);initialUpdateCheck.unref();
     const periodicUpdateCheck=setInterval(()=>updates.check(),4*60*60*1000);periodicUpdateCheck.unref();
+    const initialReminderCheck = setTimeout(checkDueReminders, 0); initialReminderCheck.unref();
+    const reminderCheck = setInterval(checkDueReminders, 60 * 1000); reminderCheck.unref();
     ipcMain.handle('app:call', async (event, action, data = {}) => {
       if (![main.webContents, quick.webContents, pinned.webContents].includes(event.sender)) throw Error(tr("Unzulässiger Zugriff."));
       if(action.startsWith('update:')){
@@ -283,6 +352,7 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         store = next;
         settings.directory = next.dir;
         saveSettings();
+        checkDueReminders();
         broadcast();
         return true;
       }
@@ -308,6 +378,24 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         if (!['graphite', 'blue', 'violet', 'emerald', 'coral'].includes(data.accent)) throw Error(tr('Unbekannte Akzentfarbe.'));
         settings.accent = data.accent;
         saveSettings();
+        broadcast();
+        return true;
+      }
+      if (action === 'taskSort') {
+        if (!['manual', 'priority', 'due'].includes(data.sort)) throw Error(tr('Ungültige Sortierung.'));
+        settings.taskSort = data.sort;
+        saveSettings(); broadcast(); return true;
+      }
+      if (action === 'reminderSettings') {
+        const leadMinutes = Number(data.leadMinutes);
+        if (typeof data.enabled !== 'boolean' || !isValidReminderTime(data.time) || ![0, 15, 30, 60, 1440].includes(leadMinutes)) throw Error(tr('Ungültige Erinnerungszeit.'));
+        const changed = settings.remindersEnabled !== data.enabled || settings.reminderTime !== data.time || settings.reminderLeadMinutes !== leadMinutes;
+        settings.remindersEnabled = data.enabled;
+        settings.reminderTime = data.time;
+        settings.reminderLeadMinutes = leadMinutes;
+        if (changed) { settings.reminderLastDay = ''; settings.reminderTaskKeys = []; }
+        saveSettings();
+        checkDueReminders();
         broadcast();
         return true;
       }
@@ -377,8 +465,16 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         return;
       }
       if (!store) throw Error(tr("Bitte zuerst einen Ablageort wählen."));
-      if (['create', 'edit', 'toggle', 'delete', 'archive', 'archiveCompleted', 'restore'].includes(action)) {
+      if (action === 'snooze') {
+        if (!settings.remindersEnabled) throw Error(tr('Fälligkeitserinnerungen sind ausgeschaltet.'));
+        const until = data.preset === 'clear' ? '' : snoozeUntil(data.preset);
+        if (data.preset !== 'clear' && !until) throw Error(tr('Ungültige Erinnerungszeit.'));
+        const result = store.setSnooze(data.id, until);
+        broadcast(); return result;
+      }
+      if (['create', 'edit', 'toggle', 'delete', 'archive', 'archiveCompleted', 'restore', 'reorder'].includes(action)) {
         const result = store.mutate(action, data);
+        checkDueReminders();
         broadcast();
         return result;
       }

@@ -4,13 +4,13 @@ function languagePicker(){return `<label class="language-picker"><span>${tr('Spr
 function renderPreservingInputs(){
  const saved=[...document.querySelectorAll('#detail-form,#quick-form,#settings-form')].map(form=>({id:form.id,values:Object.fromEntries(new FormData(form))}));
  const active=document.activeElement,activeId=active?.id,activeName=active?.name,formId=active?.form?.id;
- const scroll=window.scrollY,panelScroll=document.querySelector('.panel')?.scrollTop;
+ const scroll=window.scrollY,dialogScroll=document.querySelector('.task-dialog-body')?.scrollTop;
  render();
  for(const item of saved){const form=document.getElementById(item.id);if(!form)continue;for(const [name,value] of Object.entries(item.values)){const field=form.elements.namedItem(name);if(field){if(field.type==='checkbox')field.checked=value==='on';else field.value=value;}}
   for(const picker of form.querySelectorAll('.project-picker'))setPickedProjects(picker,JSON.parse(item.values[picker.dataset.kind]||'[]'));
  }
  if(activeId)document.getElementById(activeId)?.focus();else if(formId&&activeName)document.getElementById(formId)?.elements.namedItem(activeName)?.focus();
  enhanceControls();
- window.scrollTo(0,scroll);if(panelScroll!==undefined&&document.querySelector('.panel'))document.querySelector('.panel').scrollTop=panelScroll;
+ window.scrollTo(0,scroll);if(dialogScroll!==undefined&&document.querySelector('.task-dialog-body'))document.querySelector('.task-dialog-body').scrollTop=dialogScroll;
 }
 document.addEventListener('change',async e=>{if(!e.target.hasAttribute('data-language'))return;try{await call('language',{language:e.target.value});await refresh();}catch(err){toast(err.message);}});
