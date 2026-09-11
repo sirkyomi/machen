@@ -1,5 +1,6 @@
 const root = document.querySelector('#app');
 const quick = new URLSearchParams(location.search).has('quick');
+const pinned = new URLSearchParams(location.search).has('pinned');
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;',
   '<': '&lt;',
@@ -28,6 +29,15 @@ let state,
   contextMenu = null;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
+function syncPinnedSize() {
+  if (!pinned || state?.settings.pinAutoHeight === false || state?.settings.pinCollapsed) return;
+  requestAnimationFrame(() => {
+    const head = document.querySelector('.pinned-head'), list = document.querySelector('.pinned-list');
+    if (!head || !list) return;
+    const height = Math.min(640, Math.ceil(head.offsetHeight + Math.min(list.scrollHeight, 560) + 24));
+    call('pinContentSize', {height}).catch(() => {});
+  });
+}
 function syncQuickHeight() {
   const details = document.querySelector('#composer-details'), surface = document.querySelector('.quick');
   if (!quick || !details || details.hidden || !surface) return;
@@ -113,7 +123,31 @@ function group(title, tasks, empty = '') {
 function settingsContent() {
   const tab = (name, label) => `<button type="button" role="tab" data-settings-tab="${name}" aria-selected="${settingsTab === name}" tabindex="${settingsTab === name ? 0 : -1}">${label}${name === 'updates' ? '<span class="notification-dot" data-updates-tab-dot hidden aria-hidden="true"></span>' : ''}</button>`;
   const pane = (name, content) => `<section class="settings-pane" role="tabpanel" ${settingsTab === name ? '' : 'hidden'}>${content}</section>`;
-  return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('appearance', tr("Erscheinungsbild"))}${tab('sidebar', tr("Seitenleiste"))}${tab('capture', tr("Schnellerfassung"))}${tab('updates', tr("Updates"))}</div><form id="settings-form">${pane('general', `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p><h2>${tr("Im Hintergrund bereit")}</h2><p>${tr("Das Schließen des Fensters lässt Machen im Tray weiterlaufen. Vollständig beenden geht hier oder über das Tray-Menü.")}</p><button type="button" data-action="quit">${tr("Machen beenden")}</button>`)}${pane('appearance', `${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}`)}${pane('sidebar', `<h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p><label class="checklabel"><input type="checkbox" name="showProjects" ${state.settings.showProjects ? 'checked' : ''}>${tr("Projekte in der Seitenleiste anzeigen")}</label><label class="checklabel"><input type="checkbox" name="showContexts" ${state.settings.showContexts ? 'checked' : ''}>${tr("Kontexte in der Seitenleiste anzeigen")}</label>`)}${pane('capture', `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p><label class="checklabel"><input type="checkbox" name="autoStart" ${state.settings.autoStart ? 'checked' : ''}>${tr("Bei der Anmeldung starten (Windows / macOS)")}</label>`)}${pane('updates', '<section data-update-settings></section>')}</form></div>`;
+  const general = `<h2>${tr("Deine Ablage")}</h2><p>${tr("Aufgaben, Notizen und Anhänge bleiben in deinem Ordner.")}</p><span class="path">${escapeHtml(state.settings.directory)}</span><button type="button" class="primary" data-action="chooseDirectory">${tr("Ordner wechseln")}</button><button type="button" data-action="folder">${tr("Ordner öffnen")}</button><p class="hint">${tr("Ein Wechsel öffnet die Aufgaben des neuen Ordners. Deine bisherigen Daten bleiben am bisherigen Ort. Zum Umziehen den gesamten Ordner inklusive Begleitdateien kopieren.")}</p>${languagePicker()}<h2>${tr("Erscheinungsbild")}</h2><p>${tr("Wähle Hell, Dunkel oder die Einstellung deines Systems.")}</p>${themePicker()}`;
+  const sidebar = `<h2>${tr("Seitenleiste")}</h2><p>${tr("Wähle, welche Sammlungen links sichtbar sind.")}</p>${settingsSwitch('showProjects', state.settings.showProjects, tr("Projekte in der Seitenleiste anzeigen"))}${settingsSwitch('showContexts', state.settings.showContexts, tr("Kontexte in der Seitenleiste anzeigen"))}`;
+  const capture = `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p>${settingsSwitch('autoStart', state.settings.autoStart, tr("Bei der Anmeldung starten (Windows / macOS)"))}`;
+  return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('sidebar', tr("Seitenleiste"))}${tab('pinned', tr("Angeheftete Aufgaben"))}${tab('capture', tr("Schnellerfassung"))}${tab('updates', tr("Updates"))}</div><form id="settings-form">${pane('general', general)}${pane('sidebar', sidebar)}${pane('pinned', pinSettings())}${pane('capture', capture)}${pane('updates', '<section data-update-settings></section>')}</form></div>`;
+}
+function settingsSwitch(name, checked, label) {
+  return `<label class="settings-switch"><input type="checkbox" name="${name}" ${checked ? 'checked' : ''}><span class="switch-track" aria-hidden="true"></span><span>${label}</span></label>`;
+}
+function rangeProgress(value, min, max) {
+  return Math.round((Number(value) - Number(min)) / (Number(max) - Number(min)) * 100);
+}
+function paintRanges(scope = document) {
+  scope.querySelectorAll('.range-control input[type=range]').forEach(input => {
+    input.closest('.range-control')?.style.setProperty('--range-progress', `${rangeProgress(input.value, input.min, input.max)}%`);
+  });
+}
+function pinSettings() {
+  const s = state.settings;
+  const slider = (id, name, min, max, step, value) => `<span class="range-control"><input id="${id}" name="${name}" type="range" min="${min}" max="${max}" step="${step}" value="${value}"></span>`;
+  return `<h2>${tr("Angeheftete Aufgaben")}</h2><p>${tr("Eine kompakte Liste bleibt vor allen Fenstern sichtbar.")}</p>${settingsSwitch('pinEnabled', s.pinEnabled, tr("Angeheftete Aufgaben anzeigen"))}<div class="pin-options" ${s.pinEnabled ? '' : 'hidden'}><p class="hint">${tr("Ziehe die angeheftete Liste an die gewünschte Stelle. Ihre Position wird gespeichert.")}</p><label for="pin-opacity">${tr("Deckkraft")}: <output data-pin-opacity>${Math.round(s.pinOpacity * 100)}%</output></label>${slider('pin-opacity', 'pinOpacity', .35, 1, .05, s.pinOpacity)}<label for="pin-scale">${tr("Größe")}: <output data-pin-scale>${Math.round(s.pinScale * 100)}%</output></label>${slider('pin-scale', 'pinScale', .75, 1.5, .05, s.pinScale)}<button type="button" data-action="resetPinSettings">${tr("Zurücksetzen")}</button></div>`;
+}
+function pinnedContent() {
+  const tasks = state.tasks.filter(t => !t.done && (t.scheduled || t.created || '') <= localDay()).sort((a, b) => (a.priority || 'Z').localeCompare(b.priority || 'Z') || b.created.localeCompare(a.created));
+  const collapsed = state.settings.pinCollapsed;
+  return `<main class="pinned ${collapsed ? 'collapsed' : ''}"><header class="pinned-head"><span>${tr("Heute")}</span><span class="pinned-actions"><button class="icon" data-action="togglePinCollapsed" aria-label="${tr(collapsed ? "Angeheftete Aufgaben ausklappen" : "Angeheftete Aufgaben einklappen")}" title="${tr(collapsed ? "Angeheftete Aufgaben ausklappen" : "Angeheftete Aufgaben einklappen")}">${icon(collapsed ? 'plus' : 'minimize')}</button><button class="icon" data-action="hidePin" aria-label="${tr("Angeheftete Aufgaben ausblenden")}">${icon('close')}</button></span></header>${collapsed ? '' : `<div class="pinned-list">${tasks.length ? tasks.map(t => row(t).replace('data-select=', 'data-pinned-select=')).join('') : `<p class="empty">${tr("Keine offenen Aufgaben für heute.")}</p>`}</div>`}</main>`;
 }
 function tomorrow() {
   const value = new Date();
@@ -210,6 +244,12 @@ function render() {
   contextMenu = null;
   document.querySelector('.context-menu')?.remove();
   const draft = captureComposer();
+  if (pinned) {
+    document.body.classList.add('pinned-window');
+    root.innerHTML = pinnedContent();
+    syncPinnedSize();
+    return;
+  }
   if (quick) {
     document.body.classList.add('quick-window');
     root.innerHTML = `<main class="quick">${createComposer(true)}</main>`;
@@ -229,6 +269,7 @@ function render() {
   }
   const projects = openProjects(), contexts = openContexts();
   root.innerHTML = `<div class="shell"><nav class="sidebar" aria-label="${tr("Hauptnavigation")}">${brand()}${nav('today', tr("Heute"))}${nav('history', tr("Verlauf"))}${nav('all', tr("Alle Aufgaben"))}${nav('archive', tr("Archiv"))}<div class="sidebar-lists">${state.settings.showProjects ? sidebarList('project', tr("Projekte"), projects) : ''}${state.settings.showContexts ? sidebarList('context', tr("Kontexte"), contexts) : ''}</div><div class="bottom">${languagePicker()}${themePicker()}${nav('settings', tr("Einstellungen"))}</div></nav><main class="workspace">${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<div class="workspace-content">${content()}</div></main>${panel()}</div>`;
+  paintRanges(root);
   restoreComposer(draft);
   enhanceControls();
   paintUpdates();
@@ -242,6 +283,11 @@ async function discard() {
   return false;
 }
 root.addEventListener('input', e => {
+  if (e.target.matches('.settings input[type=range]')) {
+    e.target.closest('.range-control')?.style.setProperty('--range-progress', `${rangeProgress(e.target.value, e.target.min, e.target.max)}%`);
+    const output = document.querySelector(`[data-pin-${e.target.name === 'pinOpacity' ? 'opacity' : 'scale'}]`);
+    if (output) output.textContent = `${Math.round(Number(e.target.value) * 100)}%`;
+  }
   if (e.target.closest('#detail-form')) dirty = true;
   if (e.target.id === 'search') {
     query = e.target.value;
@@ -255,6 +301,17 @@ root.addEventListener('input', e => {
   }
 });
 root.addEventListener('change', async e => {
+  if (e.target.name === 'pinEnabled') {
+    try { await call('pinEnabled', {enabled: e.target.checked}); } catch (err) { toast(err.message); }
+    return;
+  }
+  if (['pinOpacity', 'pinScale'].includes(e.target.name)) {
+    try {
+      const data = Object.fromEntries(new FormData(document.querySelector('#settings-form')));
+      await call('pinSettings', {opacity: data.pinOpacity, scale: data.pinScale});
+    } catch (err) { toast(err.message); }
+    return;
+  }
   if (e.target.closest('#settings-form') && ['showProjects', 'showContexts', 'autoStart'].includes(e.target.name)) {
     try {
       await saveSettingsForm();
@@ -313,6 +370,10 @@ root.addEventListener('click', async e => {
   try {
     if (b.dataset.contextAction) {
       await runContextAction(b.dataset.contextAction);
+      return;
+    }
+    if (b.dataset.pinnedSelect) {
+      await call('openPinnedTask', {id: b.dataset.pinnedSelect});
       return;
     }
     if (b.dataset.settingsTab) {
@@ -452,7 +513,7 @@ root.addEventListener('click', async e => {
         id: selected
       });
       await refresh();
-    } else if (['chooseDirectory', 'folder', 'quit', 'quick', 'hideQuick'].includes(a)) {
+    } else if (['chooseDirectory', 'folder', 'quit', 'quick', 'hideQuick', 'pin', 'hidePin', 'togglePinCollapsed', 'resetPinSettings'].includes(a)) {
       if (a === 'chooseDirectory' && !(await discard())) return;
       await call(a);
       await refresh();
@@ -574,6 +635,12 @@ window.api.onChange(() => {
 });
 window.api.onFocus(() => {
   if (quick) document.querySelector('input[name=title]')?.focus();else refresh().catch(e => toast(e.message));
+});
+window.api.onOpenTask(id => {
+  if (pinned || quick) return;
+  selected = id;
+  view = 'today';
+  render();
 });
 window.addEventListener('quick:content-size', syncQuickHeight);
 let lastToday = localDay();

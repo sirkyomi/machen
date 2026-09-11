@@ -29,6 +29,10 @@ app.setName('Machen');
 app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
 let main,
   quick,
+  pinned,
+  pinMoveTimer,
+  pinIgnoreResizeUntil = 0,
+  pinUpdating = false,
   tray,
   store,
   settings,
@@ -41,6 +45,12 @@ const defaults = {
   autoStart: false,
   showProjects: true,
   showContexts: true,
+  pinOpacity: 0.92,
+  pinScale: 1,
+  pinBounds: null,
+  pinAutoHeight: true,
+  pinCollapsed: false,
+  pinEnabled: false,
   theme: 'system',
   language: 'de'
 };
@@ -55,25 +65,27 @@ function saveSettings() {
 function broadcast() {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:changed');
 }
-function windowFor(isQuick = false) {
+function windowFor(kind = 'main') {
+  const isQuick = kind === 'quick';
+  const isPinned = kind === 'pinned';
   const w = new BrowserWindow({
-    width: isQuick ? 600 : 1180,
-    height: isQuick ? 56 : 820,
-    minWidth: isQuick ? 500 : 700,
-    minHeight: isQuick ? 56 : 540,
+    width: isQuick ? 600 : isPinned ? 360 : 1180,
+    height: isQuick ? 56 : isPinned ? 520 : 820,
+    minWidth: isQuick ? 500 : isPinned ? 240 : 700,
+    minHeight: isQuick ? 56 : isPinned ? 48 : 540,
     show: false,
     title: isQuick ? tr("Aufgabe erfassen") : 'Machen',
     roundedCorners: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171c25' : '#FAFBFD',
     autoHideMenuBar: true,
     resizable: !isQuick,
-    minimizable: !isQuick,
-    maximizable: !isQuick,
+    minimizable: !isQuick && !isPinned,
+    maximizable: !isQuick && !isPinned,
     titleBarStyle: 'default',
-    frame: !isQuick,
+    frame: !isQuick && !isPinned,
     hasShadow: true,
-    alwaysOnTop: isQuick,
-    skipTaskbar: isQuick,
+    alwaysOnTop: isQuick || isPinned,
+    skipTaskbar: isQuick || isPinned,
     icon: path.join(__dirname, '../assets/app.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -83,9 +95,7 @@ function windowFor(isQuick = false) {
     }
   });
   w.loadFile(path.join(__dirname, '../src/index.html'), {
-    query: isQuick ? {
-      quick: '1'
-    } : {}
+    query: isQuick ? {quick: '1'} : isPinned ? {pinned: '1'} : {}
   });
   w.webContents.setWindowOpenHandler(() => ({
     action: 'deny'
@@ -100,6 +110,35 @@ function windowFor(isQuick = false) {
   w.on('focus', () => w.webContents.send('app:focus'));
   if (isQuick) w.on('blur', () => w.hide());
   return w;
+}
+function constrainedPinBounds(bounds = null) {
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  const scale = settings.pinScale;
+  const gap = 16, minWidth = Math.round(240 * scale), minHeight = Math.round(48 * scale);
+  const stored = bounds || settings.pinBounds || {};
+  const maxWidth = Math.max(minWidth, area.width - gap * 2), maxHeight = Math.max(minHeight, area.height - gap * 2);
+  const width = Math.max(minWidth, Math.min(Number.isFinite(stored.width) ? stored.width : Math.round(360 * scale), maxWidth));
+  const height = settings.pinCollapsed ? minHeight : Math.max(minHeight, Math.min(Number.isFinite(stored.height) ? stored.height : Math.round(220 * scale), maxHeight));
+  const maxX = Math.max(area.x + gap, area.x + area.width - width - gap);
+  const maxY = Math.max(area.y + gap, area.y + area.height - height - gap);
+  return {width, height, x: Math.max(area.x + gap, Math.min(Number.isFinite(stored.x) ? stored.x : maxX, maxX)), y: Math.max(area.y + gap, Math.min(Number.isFinite(stored.y) ? stored.y : area.y + gap, maxY))};
+}
+function applyPinSettings() {
+  if (!pinned) return;
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  pinUpdating = true;
+  pinIgnoreResizeUntil = Date.now() + 200;
+  pinned.setMinimumSize(Math.round(240 * settings.pinScale), Math.round(48 * settings.pinScale));
+  pinned.setMaximumSize(Math.max(240, area.width - 32), Math.max(48, area.height - 32));
+  pinned.setBounds(constrainedPinBounds(settings.pinBounds || undefined));
+  pinned.webContents.setZoomFactor(settings.pinScale);
+  pinned.setOpacity(settings.pinOpacity);
+  pinUpdating = false;
+}
+function showPinned() {
+  if (!store) return showMain();
+  applyPinSettings();
+  pinned.showInactive();
 }
 function showMain() {
   main.show();
@@ -124,7 +163,7 @@ function updateMenus(){
  const item=(role,label)=>({role,label:tr(label)});
  tray?.setContextMenu(Menu.buildFromTemplate([{label:tr('Machen öffnen'),click:showMain},{label:tr('Aufgabe erfassen'),click:showQuick},{type:'separator'},{label:tr('Beenden'),click:()=>app.quit()}]));
  Menu.setApplicationMenu(Menu.buildFromTemplate([
- {label:'Machen',submenu:[{label:tr('Neue Aufgabe'),accelerator:'CmdOrCtrl+N',click:showQuick},item('quit','Beenden')]},
+ {label:'Machen',submenu:[{label:tr('Neue Aufgabe'),accelerator:'CmdOrCtrl+N',click:showQuick},{label:tr('Aufgaben anheften'),click:showPinned},item('quit','Beenden')]},
  {label:tr('Bearbeiten'),submenu:[item('undo','Rückgängig'),item('redo','Wiederholen'),{type:'separator'},item('cut','Ausschneiden'),item('copy','Kopieren'),item('paste','Einfügen'),item('selectAll','Alles auswählen')]},
  {label:tr('Ansicht'),submenu:[item('reload','Neu laden'),item('resetZoom','Originalgröße'),item('zoomIn','Vergrößern'),item('zoomOut','Verkleinern'),item('togglefullscreen','Vollbild')]}
  ]));quick?.setTitle(tr('Aufgabe erfassen'));
@@ -155,8 +194,31 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
       }
     }
     main = windowFor();
-    quick = windowFor(true);
+    quick = windowFor('quick');
+    pinned = windowFor('pinned');
+    pinned.on('moved', () => {
+      if (pinUpdating) return;
+      const next = constrainedPinBounds(pinned.getBounds());
+      const current = pinned.getBounds();
+      pinUpdating = true;
+      if (next.x !== current.x || next.y !== current.y) pinned.setPosition(next.x, next.y);
+      pinUpdating = false;
+      clearTimeout(pinMoveTimer);
+      pinMoveTimer = setTimeout(() => { settings.pinBounds = {...(settings.pinBounds || {}), ...next}; saveSettings(); }, 250);
+    });
+    pinned.on('resize', () => {
+      if (pinUpdating || Date.now() < pinIgnoreResizeUntil || settings.pinCollapsed) return;
+      const next = constrainedPinBounds(pinned.getBounds());
+      pinUpdating = true;
+      pinned.setBounds(next);
+      pinUpdating = false;
+      settings.pinAutoHeight = false;
+      settings.pinBounds = next;
+      clearTimeout(pinMoveTimer);
+      pinMoveTimer = setTimeout(saveSettings, 250);
+    });
     main.once('ready-to-show', showMain);
+    if (settings.pinEnabled && store) pinned.once('ready-to-show', showPinned);
     if (!registerShortcut(settings.shortcut)) shortcutError = 'Der globale Shortcut ist belegt. Bitte in den Einstellungen \u00e4ndern.';
     const icon = nativeImage.createFromPath(path.join(__dirname, '../assets/tray.png'));
     tray = new Tray(icon);
@@ -171,7 +233,7 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
     const initialUpdateCheck=setTimeout(()=>updates.check(),0);initialUpdateCheck.unref();
     const periodicUpdateCheck=setInterval(()=>updates.check(),4*60*60*1000);periodicUpdateCheck.unref();
     ipcMain.handle('app:call', async (event, action, data = {}) => {
-      if (![main.webContents, quick.webContents].includes(event.sender)) throw Error(tr("Unzulässiger Zugriff."));
+      if (![main.webContents, quick.webContents, pinned.webContents].includes(event.sender)) throw Error(tr("Unzulässiger Zugriff."));
       if(action.startsWith('update:')){
         if(event.sender!==main.webContents)throw Error(tr('Unzulässiger Zugriff.'));
         if(action==='update:state')return updates.snapshot();
@@ -230,9 +292,48 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         broadcast();
         return true;
       }
+      if (action === 'pinSettings') {
+        const opacity = Number(data.opacity), scale = Number(data.scale);
+        if (!Number.isFinite(opacity) || opacity < 0.35 || opacity > 1 || !Number.isFinite(scale) || scale < 0.75 || scale > 1.5) throw Error(tr('Ungültige Anheft-Einstellung.'));
+        settings.pinOpacity = opacity; settings.pinScale = scale;
+        saveSettings(); applyPinSettings(); broadcast(); return true;
+      }
       if (action === 'quick') {
         showQuick();
         return;
+      }
+      if (action === 'pinEnabled') {
+        settings.pinEnabled = !!data.enabled;
+        saveSettings();
+        if (settings.pinEnabled) showPinned(); else pinned.hide();
+        broadcast(); return;
+      }
+      if (action === 'resetPinSettings') {
+        settings.pinOpacity = defaults.pinOpacity;
+        settings.pinScale = defaults.pinScale;
+        settings.pinBounds = null;
+        settings.pinAutoHeight = true;
+        settings.pinCollapsed = false;
+        saveSettings(); applyPinSettings(); broadcast(); return;
+      }
+      if (action === 'pin') { settings.pinEnabled = true; saveSettings(); showPinned(); broadcast(); return; }
+      if (action === 'hidePin') { settings.pinEnabled = false; saveSettings(); pinned.hide(); broadcast(); return; }
+      if (action === 'pinContentSize') {
+        if (event.sender !== pinned.webContents || !settings.pinAutoHeight || settings.pinCollapsed || !Number.isInteger(data.height)) throw Error(tr('Unzulässiger Zugriff.'));
+        const current = pinned.getBounds(), next = constrainedPinBounds({...current, height: data.height * settings.pinScale});
+        pinUpdating = true;
+        pinIgnoreResizeUntil = Date.now() + 200;
+        pinned.setBounds(next);
+        pinUpdating = false;
+        return;
+      }
+      if (action === 'togglePinCollapsed') {
+        settings.pinCollapsed = !settings.pinCollapsed;
+        saveSettings(); applyPinSettings(); broadcast(); return;
+      }
+      if (action === 'openPinnedTask') {
+        if (!store.snapshot().tasks.some(task => task.id === data.id)) throw Error(tr('Aufgabe nicht mehr vorhanden.'));
+        showMain(); main.webContents.send('app:openTask', data.id); return;
       }
       if(action==='quickExpanded'){
         if(event.sender!==quick.webContents||typeof data.expanded!=='boolean')throw Error(tr('Unzulässiger Zugriff.'));
