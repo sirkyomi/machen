@@ -373,6 +373,22 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
         broadcast();
         return true;
       }
+      if (action === 'resetApp') {
+        globalShortcut.unregister(settings.shortcut);
+        settings = {...defaults};
+        shortcutError = '';
+        store = undefined;
+        nativeTheme.themeSource = settings.theme;
+        if (process.platform !== 'linux') app.setLoginItemSettings({openAtLogin: false});
+        if (!registerShortcut(settings.shortcut)) shortcutError = 'Der globale Shortcut ist belegt. Bitte in den Einstellungen ändern.';
+        pinned.hide();
+        quick.hide();
+        saveSettings();
+        updateIcons();
+        updateMenus();
+        broadcast();
+        return true;
+      }
       if (action === 'accent') {
         if (!['graphite', 'blue', 'violet', 'emerald', 'coral'].includes(data.accent)) throw Error(tr('Unbekannte Akzentfarbe.'));
         settings.accent = data.accent;

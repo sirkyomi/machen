@@ -26,6 +26,7 @@ let state,
   dirty = false,
   recordingShortcut = false,
   settingsTab = 'general',
+  setupStep = 0,
   contextMenu = null,
   commandPalette = null;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
@@ -63,6 +64,19 @@ function palettePicker() {
   const palettes = [['graphite', tr('Graphit')], ['blue', tr('Blau')], ['violet', tr('Violett')], ['emerald', tr('Smaragd')], ['coral', tr('Koralle')]];
   const selected = state?.settings.accent || 'graphite';
   return `<div class="palette-picker" role="group" aria-label="${tr('Akzentfarbe')}">${palettes.map(([value, label]) => `<button type="button" class="palette-${value}" data-palette="${value}" aria-label="${label}" title="${label}" aria-pressed="${String(selected === value)}"><span aria-hidden="true"></span>${label}</button>`).join('')}</div>`;
+}
+function setupProgress() {
+  const steps = [[1, tr('Erscheinungsbild')], [2, tr('Akzentfarbe')], [3, tr('Ablageort')]];
+  return `<ol class="setup-progress" aria-label="${tr('Einrichtung')}" aria-live="polite">${steps.map(([number, label]) => `<li class="${number === setupStep ? 'current' : number < setupStep ? 'complete' : ''}"><span>${number}</span><small>${label}</small></li>`).join('')}</ol>`;
+}
+function setupContent() {
+  const steps = {
+    0: `<h1>${tr('Ein ruhiger Ort für deine Aufgaben.')}</h1><p>${tr('Machen hilft dir, den Tag zu planen und Aufgaben aus dem Kopf zu bekommen. Alles bleibt lokal in Dateien, die dir gehören.')}</p><ul class="setup-intro"><li>${tr('Heute im Blick behalten')}</li><li>${tr('Aufgaben in deinen eigenen Dateien speichern')}</li><li>${tr('Ohne Konto oder Cloud-Zwang arbeiten')}</li></ul><div class="setup-actions"><span></span><button type="button" class="primary" data-action="setupNext">${tr('Machen einrichten')}</button></div>`,
+    1: `<h1>${tr('Wie soll Machen aussehen?')}</h1><p>${tr('Du kannst die Darstellung jederzeit in den Einstellungen ändern.')}</p><div class="setup-choice">${themePicker()}</div><div class="setup-actions"><span></span><button type="button" class="primary" data-action="setupNext">${tr('Weiter')}</button></div>`,
+    2: `<h1>${tr('Wähle deinen Akzent.')}</h1><p>${tr('Er hebt Schaltflächen, Auswahl und wichtige Hinweise hervor.')}</p><div class="setup-choice">${palettePicker()}</div><div class="setup-actions"><button type="button" data-action="setupBack">${tr('Zurück')}</button><button type="button" class="primary" data-action="setupNext">${tr('Weiter')}</button></div>`,
+    3: `<h1>${tr('Wo sollen deine Aufgaben liegen?')}</h1><p>${tr('Wähle einen lokalen oder synchronisierten Ordner. Eine vorhandene todo.txt wird direkt eingelesen.')}</p>${state.shortcutError ? `<p class="error-banner">${escapeHtml(tr(state.shortcutError))}</p>` : ''}<button class="primary setup-folder" data-action="chooseDirectory">${tr('Ablageort wählen')}</button><small>${tr('Ohne Konto. Deine Daten bleiben bei dir.')}</small><div class="setup-actions"><button type="button" data-action="setupBack">${tr('Zurück')}</button></div>`
+  };
+  return `<main class="welcome setup"><header class="setup-header">${brand()}${languagePicker()}</header>${setupStep ? setupProgress() : ''}<section class="setup-panel">${steps[setupStep]}</section></main>`;
 }
 systemTheme.addEventListener('change', applyTheme);
 function toast(message) {
@@ -163,7 +177,7 @@ function settingsContent() {
   const reminders = `<h2>${tr("Fälligkeitserinnerungen")}</h2><p>${tr("Erhalte eine dezente Benachrichtigung für überfällige und heute fällige Aufgaben.")}</p>${settingsSwitch('remindersEnabled', state.settings.remindersEnabled, tr("Fälligkeitserinnerungen aktivieren"))}<div class="reminder-options" ${state.settings.remindersEnabled ? '' : 'hidden'}><label for="reminder-time">${tr("Aufgaben ohne Uhrzeit")}</label>${reminderTimePicker(state.settings.reminderTime || '09:00')}<p class="hint">${tr("Tägliche Erinnerung für fällige Aufgaben ohne konkrete Uhrzeit.")}</p><label for="reminder-lead">${tr("Aufgaben mit Uhrzeit")}</label><select id="reminder-lead" name="reminderLeadMinutes" aria-label="${tr("Erinnerung vor Termin")}">${[[0, "Zur Fälligkeit"], [15, "15 Minuten vorher"], [30, "30 Minuten vorher"], [60, "1 Stunde vorher"], [1440, "1 Tag vorher"]].map(([value, label]) => `<option value="${value}" ${reminderLead === value ? 'selected' : ''}>${tr(label)}</option>`).join('')}</select><p class="hint">${tr("Benachrichtigt relativ zur Uhrzeit der Aufgabe.")}</p></div>`;
   const capture = `<h2>${tr("Schnellerfassung")}</h2><p>${tr("Funktioniert auch, wenn Machen im Hintergrund läuft.")}</p><label for="shortcut">${tr("Globaler Shortcut")}</label><div class="shortcut-recorder"><input id="shortcut" name="shortcut" type="text" value="${escapeHtml(state.settings.shortcut)}" readonly required><button type="button" data-action="recordShortcut" aria-pressed="false">${tr("Shortcut ändern")}</button></div><p class="hint">${tr("Zum Beispiel CommandOrControl+Shift+Space oder Alt+Shift+T.")} <span id="shortcut-capture-status" aria-live="polite"></span></p>${settingsSwitch('autoStart', state.settings.autoStart, tr("Bei der Anmeldung starten (Windows / macOS)"))}`;
   const organization = `${sidebar}${pinSettings()}`;
-  const app = `${capture}<section data-update-settings></section>`;
+  const app = `${capture}<section data-update-settings></section><section class="reset-app"><h2>${tr('Machen zurücksetzen')}</h2><p>${tr('Setzt alle App-Einstellungen zurück und startet die Einrichtung erneut. Deine Aufgabenordner bleiben unverändert.')}</p><button type="button" class="danger-button" data-action="resetApp">${tr('Machen zurücksetzen')}</button></section>`;
   return `<div class="settings"><div class="settings-heading"><h1>${tr("Einstellungen")}</h1></div><div class="settings-tabs" role="tablist" aria-label="${tr("Einstellungen")}">${tab('general', tr("Allgemein"))}${tab('organization', tr("Organisation"))}${tab('reminders', tr("Erinnerungen"))}${tab('app', tr("App"))}</div><form id="settings-form">${pane('general', general)}${pane('organization', organization)}${pane('reminders', reminders)}${pane('app', app)}</form></div>`;
 }
 function settingsSwitch(name, checked, label) {
@@ -352,7 +366,7 @@ function render() {
     return;
   }
   if (!state.configured) {
-    root.innerHTML = `<main class="welcome">${brand()}${languagePicker()}<h1>${tr("Dein Tag.")}<br>${tr("Deine Aufgaben.")}<br>${tr("Dein Ordner.")}</h1><p>${tr("Wähle einen Ort für deine Aufgaben. Ein lokaler Ordner oder dein synchronisierter Cloud-Ordner – du entscheidest. Eine vorhandene todo.txt wird direkt eingelesen.")}</p>${state.shortcutError ? `<p>${escapeHtml(tr(state.shortcutError))}</p>` : ''}<button class="primary" data-action="chooseDirectory">${tr("Ablageort wählen")}</button><small>${tr("Ohne Konto. Deine Daten bleiben bei dir.")}</small></main>`;
+    root.innerHTML = setupContent();
     enhanceControls();
     paintUpdates();
     return;
@@ -621,7 +635,18 @@ root.addEventListener('click', async e => {
       applyTheme();
     }
     const a = b.dataset.action;
-    if(a==='updates'){if(!(await discard()))return;view='settings';settingsTab='app';selected=null;project='';context='';render();}
+    if (a === 'setupNext') { setupStep = Math.min(3, setupStep + 1); render(); }
+    else if (a === 'setupBack') { setupStep = Math.max(0, setupStep - 1); render(); }
+    else if (a === 'resetApp') {
+      if (!await askInApp(tr('Machen zurücksetzen?'), tr('Alle App-Einstellungen werden zurückgesetzt und die Einrichtung beginnt erneut. Deine Aufgabenordner werden nicht gelöscht.'), tr('Jetzt zurücksetzen'))) return;
+      await call('resetApp');
+      state = await call('state');
+      selected = null;
+      view = 'today';
+      setupStep = 0;
+      render();
+    }
+    else if(a==='updates'){if(!(await discard()))return;view='settings';settingsTab='app';selected=null;project='';context='';render();}
     else if (a === 'addSubtask') {
       addSubtaskFromInput();
     } else if (a === 'removeSubtask') {
