@@ -9,7 +9,7 @@ function hasFilters() {
 }
 function filterBar() {
   const options = (values, current) => values.map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === current ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
-  return `<div class="filter-bar" aria-label="${tr("Aufgaben filtern")}">
+  return `<section class="filter-area"><button type="button" class="filter-toggle" data-action="toggleFilters" aria-expanded="${filtersOpen}" aria-controls="filter-options">${tr('Filter')}${hasFilters() ? ` <span>${Object.values(taskFilters).filter(Boolean).length}</span>` : ''}${icon('down')}</button><div class="filter-bar" id="filter-options" aria-label="${tr("Aufgaben filtern")}" ${filtersOpen ? '' : 'hidden'}>
  <label>${tr("Projekt")}<select data-filter="project" aria-label="${tr("Nach Projekt filtern")}">${options([['', tr("Alle Projekte")], ...allProjects().map(p => [p, p])], taskFilters.project)}</select></label>
  <label>${tr("Kontext")}<select data-filter="context" aria-label="${tr("Nach Kontext filtern")}">${options([['', tr("Alle Kontexte")], ...allContexts().map(p => [p, '@' + p])], taskFilters.context)}</select></label>
  <label>${tr("Priorität")}<select data-filter="priority" aria-label="${tr("Nach Priorität filtern")}">${options([['', tr("Alle Prioritäten")], ['none', tr("Ohne Priorität")], ...Array.from({
@@ -19,7 +19,7 @@ function filterBar() {
     return [p, p];
   })], taskFilters.priority)}</select></label>
  <label>${tr("Fälligkeit")}<select data-filter="due" aria-label="${tr("Nach Fälligkeit filtern")}">${options([['', tr("Jeder Termin")], ['overdue', tr("Überfällig")], ['today', tr("Heute fällig")], ['week', tr("Nächste 7 Tage")], ['none', tr("Ohne Termin")]], taskFilters.due)}</select></label>
- ${hasFilters() ? `<button data-action="resetFilters">${tr("Zurücksetzen")}</button>` : ''}</div>`;
+ ${hasFilters() ? `<button data-action="resetFilters">${tr("Zurücksetzen")}</button>` : ''}</div></section>`;
 }
 function matchesFilters(t) {
   if (taskFilters.project && !taskProjects(t.title).includes(taskFilters.project)) return false;

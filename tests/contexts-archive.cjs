@@ -16,6 +16,7 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),os=
  await page.getByRole('button',{name:'Alle Aufgaben',exact:true}).click();
  const newTask=(await page.evaluate(()=>window.api.call('state'))).tasks.find(t=>t.title.startsWith('Anruf vorbereiten'));
  assert.match(newTask.title,/@Telefon/);assert.match(newTask.title,/@B%C3%BCro/);
+ await page.getByRole('button',{name:'Filter',exact:true}).click();
  await page.locator('select[aria-label="Nach Projekt filtern"]').selectOption('Arbeit');await page.locator('select[aria-label="Nach Priorität filtern"]').selectOption('A');await page.locator('select[aria-label="Nach Kontext filtern"]').selectOption('Telefon');await page.locator('select[aria-label="Nach Fälligkeit filtern"]').selectOption('overdue');
  assert.equal(await page.locator('.task-title').count(),1);assert.equal(await page.locator('.task-title').textContent(),'Alt');
  await page.getByRole('button',{name:'Zurücksetzen',exact:true}).click();assert.equal(await page.locator('.task-title').count(),3);

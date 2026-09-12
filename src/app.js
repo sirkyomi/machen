@@ -22,6 +22,7 @@ let state,
   query = '',
   project = '',
   context = '',
+  filtersOpen = false,
   toastTimer,
   dirty = false,
   recordingShortcut = false,
@@ -240,13 +241,19 @@ function showContextMenu(x, y) {
 }
 function content() {
   if (view === 'settings') return settingsContent();
-  const title = view === 'archive' ? tr("Archiv") : view === 'history' ? tr("Verlauf") : view === 'all' ? tr("Alle Aufgaben") : view === 'project' ? project : view === 'context' ? '@' + context : day === localDay() ? tr("Heute") : dateLabel(day);
-  let html = `<div class="topline"><h1>${escapeHtml(title)}</h1><button class="icon" data-action="search" aria-label="${tr("Aufgaben durchsuchen")}">${icon('search')}</button></div><p class="date-caption">${view === 'today' ? new Date(day + 'T12:00:00').toLocaleDateString(locale(), {
+  const selectedDayLabel = new Date(day + 'T12:00:00').toLocaleDateString(locale(), {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const title = view === 'archive' ? tr("Archiv") : view === 'history' ? tr("Verlauf") : view === 'all' ? tr("Alle Aufgaben") : view === 'project' ? project : view === 'context' ? '@' + context : day === localDay() ? tr("Heute") : selectedDayLabel;
+  const datedView = view === 'today' || view === 'history';
+  const caption = view === 'today' && day === localDay() ? new Date(day + 'T12:00:00').toLocaleDateString(locale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
-  }) : view === 'history' ? tr("Was hinzugekommen ist. Was geschafft ist.") : ''}</p>`;
-  if (view === 'today' || view === 'history') html += `<div class="date-navigation"><div class="history-picker"><button class="icon" data-step="-7" aria-label="${tr("Vorherige Woche")}">${icon('left')}</button><input type="date" id="jump-date" aria-label="${tr("Tag auswählen")}" value="${day}"><button class="icon" data-step="7" aria-label="${tr("Nächste Woche")}">${icon('right')}</button><button data-action="today">${tr("Heute")}</button></div>${week()}</div>`;
+  }) : view === 'history' ? tr("Was hinzugekommen ist. Was geschafft ist.") : '';
+  const todayControl = day !== localDay() ? `<button class="today-button" data-action="today">${tr('Heute')}</button>` : '<span class="today-spacer" aria-hidden="true"></span>';
+  const navigation = `<div class="week-navigation"><button class="icon" data-step="-7" aria-label="${tr("Vorherige Woche")}">${icon('left')}</button>${week()}<button class="icon" data-step="7" aria-label="${tr("Nächste Woche")}">${icon('right')}</button>${todayControl}</div>`;
+  let html = datedView ? `<div class="day-header"><div class="day-heading"><h1>${escapeHtml(title)}</h1>${caption ? `<p class="date-caption">${caption}</p>` : ''}</div>${navigation}<button class="icon" data-action="search" aria-label="${tr("Aufgaben durchsuchen")}">${icon('search')}</button></div>` : `<div class="topline"><h1>${escapeHtml(title)}</h1><button class="icon" data-action="search" aria-label="${tr("Aufgaben durchsuchen")}">${icon('search')}</button></div><p class="date-caption">${caption}</p>`;
   if (query !== null && query !== '') html += `<input class="search" id="search" placeholder="${tr("Aufgaben durchsuchen …")}" value="${escapeHtml(query === ' ' ? '' : query)}" aria-label="${tr("Aufgaben durchsuchen")}">`;
   if (view === 'history') {
     let events = state.events.filter(e => e.day === day);
@@ -760,6 +767,9 @@ root.addEventListener('click', async e => {
         priority: '',
         due: ''
       };
+      render();
+    } else if (a === 'toggleFilters') {
+      filtersOpen = !filtersOpen;
       render();
     } else if (a === 'archive' || a === 'restore') {
       if (!(await discard())) return;

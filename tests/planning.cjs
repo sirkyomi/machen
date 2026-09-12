@@ -6,12 +6,16 @@ const {_electron:electron}=require('playwright');const fs=require('node:fs'),os=
   for(let i=0;i<100&&!page;i++){page=app.windows().find(w=>w.url().includes('index.html')&&!w.url().includes('quick=1'));if(!page)await new Promise(r=>setTimeout(r,50));}
   await page.locator('#composer').waitFor();
   const dates=await page.evaluate(()=>{const next=new Date();next.setDate(next.getDate()+1);return {today:localDay(),tomorrow:localDay(next)};});
-  await page.locator('#jump-date').fill(dates.tomorrow);await page.locator('#jump-date').dispatchEvent('change');
+  const calendarWidth=await page.locator('.week').evaluate(el=>el.getBoundingClientRect().width);
+  if(!await page.locator(`[data-day="${dates.tomorrow}"]`).count())await page.locator('[data-step="7"]').click();await page.locator(`[data-day="${dates.tomorrow}"]`).click();
+  assert.ok(Math.abs((await page.locator('.week').evaluate(el=>el.getBoundingClientRect().width))-calendarWidth)<=4);
+  assert.match(await page.locator('.day-heading h1').textContent(),/^[A-Za-z]+, /);assert.equal(await page.locator('.day-heading h1').evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
+  assert.equal(await page.locator('.workspace-content').evaluate(el=>{const container=el.getBoundingClientRect(),navigation=el.querySelector('.week-navigation').getBoundingClientRect();return navigation.right<=container.right+1;}),true);
   await page.getByRole('textbox',{name:'New task',exact:true}).fill('Only tomorrow');await page.getByRole('button',{name:'Add',exact:true}).click();
   await page.locator('.task-title').filter({hasText:'Only tomorrow'}).waitFor();
-  await page.getByRole('button',{name:'Today',exact:true}).click();assert.equal(await page.locator('.task-title').filter({hasText:'Only tomorrow'}).count(),0);
+  assert.equal(await page.locator('.week-navigation').getByRole('button',{name:'Today',exact:true}).count(),1);await page.locator('.week-navigation').getByRole('button',{name:'Today',exact:true}).click();assert.equal(await page.locator('.task-title').filter({hasText:'Only tomorrow'}).count(),0);
   assert.equal(await page.locator('.nav .count').textContent(),'0');
-  await page.locator('#jump-date').fill(dates.tomorrow);await page.locator('#jump-date').dispatchEvent('change');await page.locator('.task-title').filter({hasText:'Only tomorrow'}).waitFor();
+  if(!await page.locator(`[data-day="${dates.tomorrow}"]`).count())await page.locator('[data-step="7"]').click();await page.locator(`[data-day="${dates.tomorrow}"]`).click();await page.locator('.task-title').filter({hasText:'Only tomorrow'}).waitFor();
   const task=(await page.evaluate(()=>window.api.call('state'))).tasks[0];assert.equal(task.created,dates.today);assert.equal(task.scheduled,dates.tomorrow);
   await page.evaluate(()=>window.api.call('quick'));const quick=app.windows().find(w=>w.url().includes('quick=1'));
   await quick.locator('.quick').waitFor();

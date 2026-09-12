@@ -66,7 +66,7 @@
   'Projektname darf höchstens 80 Zeichen enthalten.':'Names must be no longer than 80 characters.',
   'Bitte einen Aufgabentitel eingeben.':'Please enter a task title.','Verwerfen':'Discard','Abbrechen':'Cancel',
   'Projekt {name} entfernen':'Remove project {name}','Kontext {name} entfernen':'Remove context {name}',
-  'Aufgaben filtern':'Filter tasks','Nach Projekt filtern':'Filter by project','Alle Projekte':'All projects',
+  'Aufgaben filtern':'Filter tasks','Filter':'Filter','Nach Projekt filtern':'Filter by project','Alle Projekte':'All projects',
   'Nach Kontext filtern':'Filter by context','Alle Kontexte':'All contexts','Nach Priorität filtern':'Filter by priority','Alle Prioritäten':'All priorities',
   'Ohne Priorität':'No priority','Fälligkeit':'Due date','Nach Fälligkeit filtern':'Filter by due date','Jeder Termin':'Any date',
   'Überfällig':'Overdue','Heute fällig':'Due today','Nächste 7 Tage':'Next 7 days','Ohne Termin':'No due date','Zurücksetzen':'Reset',
