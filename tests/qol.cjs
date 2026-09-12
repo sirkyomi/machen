@@ -5,6 +5,9 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
   const home=fs.mkdtempSync(path.join(os.tmpdir(),'machen-qol-')),dir=path.join(home,'data');fs.mkdirSync(dir);
   fs.writeFileSync(path.join(home,'settings.json'),JSON.stringify({directory:dir,language:'en',theme:'dark',shortcut:'Alt+Shift+F4'}));
   fs.writeFileSync(path.join(dir,'todo.txt'),'2026-09-09 Work task +Work @Office id:one\n2026-09-09 Personal task +Home @Phone id:two\nx 2026-09-09 2026-09-08 Finished +Closed @Done id:three\n');
+  fs.writeFileSync(path.join(dir,'done.txt'),'x 2026-09-09 2026-09-08 Archived record +Archive @Reference id:archived\n');
+  fs.mkdirSync(path.join(dir,'metadata'));
+  fs.writeFileSync(path.join(dir,'metadata','.machen.json'),JSON.stringify({version:1,context:{one:{notes:'Source: https://source.example/brief and mail@example.org'},archived:{notes:'archive-only reference'}},events:[]}));
   let app;
   try{
     app=await electron.launch({args:['.'],env:{...process.env,MACHEN_TEST_HOME:home}});
@@ -40,11 +43,27 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
     assert.equal(await page.getByRole('button',{name:'Save settings',exact:true}).count(),0);
     await page.keyboard.press('Control+K');
     await page.getByRole('dialog').waitFor();
+    assert.equal(await page.locator('.command-palette').getByRole('heading',{name:'Actions',exact:true}).count(),1);
+    assert.equal(await page.locator('.command-palette').getByRole('heading',{name:'Views',exact:true}).count(),1);
     await page.getByRole('searchbox',{name:'Command palette'}).fill('Work task');
+    assert.equal(await page.locator('.command-palette-section h2').count(),1);
     await page.getByRole('option',{name:/Work task/}).click();
     await page.getByRole('heading',{name:'All tasks',exact:true}).waitFor();
     await page.locator('.command-palette').waitFor({state:'detached'});
     await page.locator('.workspace .task-title',{hasText:'Work task'}).waitFor();
+    await page.getByRole('button',{name:'Close details',exact:true}).click();
+    await page.keyboard.press('Control+F');
+    await page.getByRole('dialog').waitFor();
+    await page.getByRole('searchbox',{name:'Search all tasks'}).fill('source.example');
+    await page.getByRole('option',{name:/Work task/}).click();
+    await page.locator('.task-dialog').waitFor();
+    assert.equal(await page.getByRole('button',{name:'https://source.example/brief',exact:true}).count(),1);
+    assert.equal(await page.getByRole('button',{name:'mail@example.org',exact:true}).count(),1);
+    await page.getByRole('button',{name:'Close details',exact:true}).click();
+    await page.keyboard.press('Control+F');
+    await page.getByRole('searchbox',{name:'Search all tasks'}).fill('archive-only');
+    await page.getByRole('option',{name:/Archived record/}).click();
+    await page.locator('.task-dialog').waitFor();
     await page.getByRole('button',{name:'Close details',exact:true}).click();
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await page.locator('[data-settings-tab="reminders"]').click();

@@ -20,6 +20,7 @@ const {translate}=require('../src/i18n.js');
 const tr=(key,values)=>translate(settings?.language||'de',key,values);
 const fs = require('node:fs');
 const path = require('node:path');
+const {safeExternalUrl} = require('./external-links.cjs');
 const {
   Store
 } = require('./store.cjs');
@@ -513,6 +514,12 @@ if (!app.requestSingleInstanceLock()) app.quit();else {
           const error = await shell.openPath(file);
           if (error) throw Error(error);
         }
+        return;
+      }
+      if (action === 'openExternalLink') {
+        const url = safeExternalUrl(data?.url);
+        if (!url) throw Error(tr('Ungültiger Link.'));
+        await shell.openExternal(url);
         return;
       }
       if (action === 'folder') return shell.openPath(store.dir);

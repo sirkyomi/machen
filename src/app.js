@@ -28,7 +28,8 @@ let state,
   settingsTab = 'general',
   setupStep = 0,
   contextMenu = null,
-  commandPalette = null;
+  commandPalette = null,
+  globalSearch = null;
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let quickSizeObserver;
 function syncPinnedSize() {
@@ -317,12 +318,17 @@ function addSubtaskFromInput() {
   document.querySelector('.subtask-list')?.insertAdjacentHTML('beforeend', subtaskRow({id: crypto.randomUUID(), title, done: false}));
   input.value = ''; dirty = true; updateSubtaskCount(); input.focus();
 }
+function noteSources(notes) {
+  const links = window.MachenLinks.findLinks(notes);
+  if (!links.length) return '';
+  return `<section class="note-sources" aria-label="${tr('Links in dieser Notiz')}"><span>${tr('Links in dieser Notiz')}</span><div>${links.map(link => `<button type="button" class="note-link" data-external-url="${escapeHtml(link.url)}" title="${escapeHtml(link.label)}">${escapeHtml(link.label)}</button>`).join('')}</div></section>`;
+}
 function panel() {
   const t = allTasks().find(t => t.id === selected);
   if (!t) return '';
   return `<dialog class="task-dialog" aria-labelledby="task-dialog-title"><div class="task-dialog-head"><h2 id="task-dialog-title">${tr("Aufgabendetails")}</h2><button class="icon" data-action="closePanel" aria-label="${tr("Details schließen")}">${icon('close')}</button></div><form id="detail-form"><div class="task-dialog-body"><div class="task-dialog-column"><label for="detail-title">${tr("Aufgabe")}</label><textarea class="title-edit" id="detail-title" name="title" required maxlength="2000">${escapeHtml(displayTitle(t.title))}</textarea>${projectPicker('edit', taskProjects(t.title))}${contextPicker('edit-context', taskContexts(t.title))}${subtaskEditor(t)}</div><div class="task-dialog-column"><div class="fields task-due-fields"><div><label for="due">${tr("Fällig am")}</label><input id="due" type="date" name="due" value="${t.due}"></div><div><label for="due-time">${tr("Uhrzeit")}</label>${taskDueTimePicker(t.dueTime || '')}</div></div><label for="priority">${tr("Priorität")}</label><select id="priority" name="priority"><option value="">${tr("Keine")}</option>${Array.from({
     length: 26
-  }, (_, i) => String.fromCharCode(65 + i)).map(p => `<option ${t.priority === p ? 'selected' : ''}>${p}</option>`).join('')}</select><label for="notes">${tr("Notizen & E-Mail-Kontext")}</label><textarea name="notes" id="notes" placeholder="${tr("Weitere Infos, E-Mail-Text oder einen Link hier ablegen …")}">${escapeHtml(t.notes || '')}</textarea><label>${tr("Anhänge")}</label>${(t.files || []).map(f => `<button type="button" class="file" data-file="${escapeHtml(f.id)}">${icon('file')} ${escapeHtml(f.name)}</button>`).join('')}<button type="button" data-action="attach">${icon('file')} ${tr("Datei oder E-Mail")}</button><div class="archive-actions">${t.archived ? `<button type="button" data-action="restore">${tr("In Aufgaben zurückholen")}</button>` : t.done ? `<button type="button" data-action="archive">${tr("Archivieren")}</button>` : ''}</div></div></div><div class="task-dialog-footer"><button type="button" class="danger" data-action="delete">${tr("Löschen")}</button><div class="panel-actions"><button type="button" data-action="closePanel">${tr("Abbrechen")}</button><button type="submit" class="primary">${tr("Speichern")}</button></div></div></form></dialog>`;
+  }, (_, i) => String.fromCharCode(65 + i)).map(p => `<option ${t.priority === p ? 'selected' : ''}>${p}</option>`).join('')}</select><label for="notes">${tr("Notizen & E-Mail-Kontext")}</label><textarea name="notes" id="notes" placeholder="${tr("Weitere Infos, E-Mail-Text oder einen Link hier ablegen …")}">${escapeHtml(t.notes || '')}</textarea>${noteSources(t.notes)}<label>${tr("Anhänge")}</label>${(t.files || []).map(f => `<button type="button" class="file" data-file="${escapeHtml(f.id)}">${icon('file')} ${escapeHtml(f.name)}</button>`).join('')}<button type="button" data-action="attach">${icon('file')} ${tr("Datei oder E-Mail")}</button><div class="archive-actions">${t.archived ? `<button type="button" data-action="restore">${tr("In Aufgaben zurückholen")}</button>` : t.done ? `<button type="button" data-action="archive">${tr("Archivieren")}</button>` : ''}</div></div></div><div class="task-dialog-footer"><button type="button" class="danger" data-action="delete">${tr("Löschen")}</button><div class="panel-actions"><button type="button" data-action="closePanel">${tr("Abbrechen")}</button><button type="submit" class="primary">${tr("Speichern")}</button></div></div></form></dialog>`;
 }
 async function closeTaskDialog() {
   if (!(await discard())) return;
@@ -391,38 +397,39 @@ async function discard() {
 function commandPaletteOptions(value = '') {
   const needle = value.trim().toLocaleLowerCase(locale());
   const commands = [
-    {label: tr('Neue Aufgabe'), detail: tr('Aufgabe erfassen'), run: async () => {
+    {section: tr('Aktionen'), label: tr('Neue Aufgabe'), detail: tr('Aufgabe erfassen'), icon: 'plus', run: async () => {
       if (!(await discard())) return false;
       view = 'today'; selected = null; project = ''; context = ''; query = ''; render();
       requestAnimationFrame(() => document.querySelector('#composer input[name=title]')?.focus());
     }},
-    {label: tr('Heute'), detail: tr('Heute anzeigen'), run: async () => {
+    {section: tr('Aktionen'), label: tr('Alles durchsuchen'), detail: tr('Aufgaben, Notizen und Archiv'), icon: 'search', run: async () => 'global-search'},
+    {section: tr('Ansichten'), label: tr('Heute'), detail: tr('Heute anzeigen'), icon: 'today', run: async () => {
       if (!(await discard())) return false;
       view = 'today'; selected = null; project = ''; context = ''; query = ''; day = localDay(); render();
     }},
-    {label: tr('Alle Aufgaben'), detail: tr('Alle Aufgaben anzeigen'), run: async () => {
+    {section: tr('Ansichten'), label: tr('Alle Aufgaben'), detail: tr('Alle Aufgaben anzeigen'), icon: 'all', run: async () => {
       if (!(await discard())) return false;
       view = 'all'; selected = null; project = ''; context = ''; query = ''; render();
     }},
-    {label: tr('Einstellungen'), detail: tr('Einstellungen öffnen'), run: async () => {
+    {section: tr('Ansichten'), label: tr('Einstellungen'), detail: tr('Einstellungen öffnen'), icon: 'settings', run: async () => {
       if (!(await discard())) return false;
       view = 'settings'; selected = null; project = ''; context = ''; query = ''; render();
     }}
   ];
   const matches = text => !needle || text.toLocaleLowerCase(locale()).includes(needle);
-  const taskOptions = allTasks().filter(task => matches(`${displayTitle(task.title)} ${task.notes || ''} ${taskProjects(task.title).join(' ')} ${taskContexts(task.title).join(' ')}`)).slice(0, 7).map(task => ({
-    label: displayTitle(task.title), detail: task.archived ? tr('Archiv') : tr('Aufgabe'), run: async () => {
+  const taskOptions = needle ? allTasks().filter(task => matches(`${displayTitle(task.title)} ${task.notes || ''} ${taskProjects(task.title).join(' ')} ${taskContexts(task.title).join(' ')}`)).slice(0, 5).map(task => ({
+    section: tr('Aufgaben'), label: displayTitle(task.title), detail: [task.archived ? tr('Archiv') : task.done ? tr('Erledigt') : tr('Offen'), ...taskProjects(task.title).map(value => `+${value}`), ...taskContexts(task.title).map(value => `@${value}`)].join(' · '), icon: task.archived ? 'archive' : 'all', run: async () => {
       if (!(await discard())) return false;
       view = task.archived ? 'archive' : 'all'; selected = task.id; project = ''; context = ''; query = ''; render();
     }
-  }));
+  })) : [];
   return [...commands.filter(command => matches(`${command.label} ${command.detail}`)), ...taskOptions];
 }
 function openCommandPalette() {
   if (quick || pinned || commandPalette || !state?.configured) return;
   const dialog = document.createElement('dialog');
   dialog.className = 'command-palette';
-  dialog.innerHTML = `<div class="command-palette-head"><span>${tr('Befehlspalette')}</span><kbd>Esc</kbd></div><input class="command-palette-input" type="search" autocomplete="off" placeholder="${tr('Aufgaben und Aktionen durchsuchen …')}" aria-label="${tr('Befehlspalette')}"><div class="command-palette-results" role="listbox" aria-label="${tr('Befehlspalette')}"></div>`;
+  dialog.innerHTML = `<div class="command-palette-head"><span>${tr('Befehlspalette')}</span><span><kbd>Strg K</kbd><kbd>Esc</kbd></span></div><input class="command-palette-input" type="search" autocomplete="off" placeholder="${tr('Befehl oder Aufgabe finden …')}" aria-label="${tr('Befehlspalette')}"><div class="command-palette-results" role="listbox" aria-label="${tr('Befehlspalette')}"></div>`;
   document.body.append(dialog);
   commandPalette = dialog;
   const input = dialog.querySelector('input');
@@ -431,13 +438,17 @@ function openCommandPalette() {
   const paint = () => {
     options = commandPaletteOptions(input.value);
     index = Math.max(0, Math.min(index, options.length - 1));
-    list.innerHTML = options.length ? options.map((option, optionIndex) => `<button type="button" role="option" aria-selected="${optionIndex === index}" data-command-option="${optionIndex}"><span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.detail)}</small></button>`).join('') : `<p class="command-palette-empty">${tr('Keine Ergebnisse.')}</p>`;
+    const sections = [...new Set(options.map(option => option.section))];
+    list.innerHTML = options.length ? sections.map(section => `<section class="command-palette-section"><h2>${escapeHtml(section)}</h2>${options.map((option, optionIndex) => option.section === section ? `<button type="button" role="option" aria-selected="${optionIndex === index}" data-command-option="${optionIndex}">${icon(option.icon)}<span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.detail)}</small></button>` : '').join('')}</section>`).join('') : `<p class="command-palette-empty">${tr('Keine Ergebnisse.')}</p>`;
   };
   const execute = async selectedIndex => {
     const option = options[selectedIndex];
     if (!option) return;
     const result = await option.run();
-    if (result !== false) dialog.close();
+    if (result === 'global-search') {
+      dialog.close();
+      requestAnimationFrame(openGlobalSearch);
+    } else if (result !== false) dialog.close();
   };
   input.addEventListener('input', () => { index = 0; paint(); });
   list.addEventListener('click', event => {
@@ -455,6 +466,61 @@ function openCommandPalette() {
     }
   });
   dialog.addEventListener('close', () => { dialog.remove(); commandPalette = null; });
+  paint();
+  dialog.showModal();
+  input.focus();
+}
+function globalSearchOptions(value = '') {
+  const needle = value.trim().toLocaleLowerCase(locale());
+  if (!needle) return [];
+  return allTasks().filter(task => {
+    const searchable = [displayTitle(task.title), task.notes || '', ...taskProjects(task.title), ...taskContexts(task.title), ...(task.subtasks || []).map(item => item.title)].join(' ').toLocaleLowerCase(locale());
+    return searchable.includes(needle);
+  }).sort((a, b) => Number(!!a.archived) - Number(!!b.archived) || Number(!!a.done) - Number(!!b.done) || (a.due || '9999-12-31').localeCompare(b.due || '9999-12-31') || displayTitle(a.title).localeCompare(displayTitle(b.title), locale())).map(task => ({
+    task,
+    label: displayTitle(task.title),
+    detail: [task.archived ? tr('Archiv') : task.done ? tr('Erledigt') : tr('Offen'), ...taskProjects(task.title).map(value => `+${value}`), ...taskContexts(task.title).map(value => `@${value}`), task.notes ? tr('Notiz') : ''].filter(Boolean).join(' · ')
+  }));
+}
+function openGlobalSearch() {
+  if (quick || pinned || globalSearch || !state?.configured) return;
+  const dialog = document.createElement('dialog');
+  dialog.className = 'global-search';
+  dialog.innerHTML = `<div class="global-search-head"><span>${tr('Alle Aufgaben durchsuchen')}</span><kbd>Esc</kbd></div><input type="search" autocomplete="off" placeholder="${tr('Nach Aufgaben, Notizen, Projekten oder Kontexten suchen …')}" aria-label="${tr('Alle Aufgaben durchsuchen')}"><p class="global-search-hint">${tr('Mit ↑ ↓ auswählen · Enter öffnen')}</p><div class="global-search-results" role="listbox" aria-label="${tr('Suchergebnisse')}"></div>`;
+  document.body.append(dialog);
+  globalSearch = dialog;
+  const input = dialog.querySelector('input'), list = dialog.querySelector('.global-search-results');
+  let options = [], index = 0;
+  const paint = () => {
+    options = globalSearchOptions(input.value);
+    index = Math.max(0, Math.min(index, options.length - 1));
+    list.innerHTML = input.value.trim() ? options.length ? options.map((option, optionIndex) => `<button type="button" role="option" aria-selected="${optionIndex === index}" data-global-search-option="${optionIndex}"><span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.detail)}</small></button>`).join('') : `<p class="command-palette-empty">${tr('Keine Ergebnisse.')}</p>` : `<p class="command-palette-empty">${tr('Durchsucht aktive Aufgaben, Archiv, Notizen, Projekte und Kontexte.')}</p>`;
+  };
+  const execute = async selectedIndex => {
+    const option = options[selectedIndex];
+    if (!option || !(await discard())) return;
+    view = option.task.archived ? 'archive' : 'all';
+    selected = option.task.id;
+    project = ''; context = ''; query = '';
+    render();
+    dialog.close();
+  };
+  input.addEventListener('input', () => { index = 0; paint(); });
+  list.addEventListener('click', event => {
+    const option = event.target.closest('[data-global-search-option]');
+    if (option) void execute(Number(option.dataset.globalSearchOption));
+  });
+  dialog.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (options.length) { index = (index + (event.key === 'ArrowDown' ? 1 : options.length - 1)) % options.length; paint(); }
+    } else if (event.key === 'Enter') {
+      event.preventDefault(); void execute(index);
+    } else if (event.key === 'Escape') {
+      event.preventDefault(); dialog.close();
+    }
+  });
+  dialog.addEventListener('close', () => { dialog.remove(); globalSearch = null; });
   paint();
   dialog.showModal();
   input.focus();
@@ -622,6 +688,7 @@ root.addEventListener('click', async e => {
       id: selected,
       fileId: b.dataset.file
     });
+    if (b.dataset.externalUrl) await call('openExternalLink', {url: b.dataset.externalUrl});
     if (b.dataset.theme) {
       await call('theme', {
         theme: b.dataset.theme
@@ -669,9 +736,7 @@ root.addEventListener('click', async e => {
     } else if (a === 'closePanel') {
       await closeTaskDialog();
     } else if (a === 'search') {
-      query = query ? '' : ' ';
-      render();
-      document.querySelector('#search')?.focus();
+      openGlobalSearch();
     } else if (a === 'today') {
       day = localDay();
       render();
@@ -835,6 +900,11 @@ document.addEventListener('keydown', async e => {
   if (!quick && !pinned && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     openCommandPalette();
+    return;
+  }
+  if (!quick && !pinned && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    openGlobalSearch();
     return;
   }
   if (e.key === 'Escape') {
