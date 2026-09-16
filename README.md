@@ -4,7 +4,7 @@
 
 Machen keeps tasks in files you own. There is no account, cloud service, or lock-in. Capture a task, plan your day, and open the details only when you need them.
 
-[Website and FAQ](https://sirkyomi.github.io/machen/)
+[Dokumentation und FAQ](https://docs.machen.regbr.de/)
 
 ## Download
 
@@ -65,6 +65,10 @@ Machen reloads external edits when it regains focus and every 30 seconds. Avoid 
 ## Updates
 
 Installed copies check for updates at launch and then every four hours. Downloads and installation always require your click. You can also check manually from Settings.
+
+## Web app (experimental)
+
+Machen can run as an installable Progressive Web App (PWA). It reuses the desktop UI, works offline after the first visit, and stores its tasks locally in the browser. Start it with `npm run pwa`, then open `http://localhost:4173` on a computer or phone on the same network. Browser storage is deliberately separate from the desktop folder; import/export of `todo.txt` is the next web-specific step.
 
 ## For contributors
 

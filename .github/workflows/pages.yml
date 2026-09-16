@@ -1,11 +1,8 @@
-name: Deploy GitHub Pages
+name: Deploy PWA to GitHub Pages
 
 on:
   push:
     branches: [main]
-    paths:
-      - docs/**
-      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
@@ -28,6 +25,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: src
       - id: deployment
         uses: actions/deploy-pages@v4

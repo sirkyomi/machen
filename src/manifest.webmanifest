@@ -1,0 +1,11 @@
+{
+  "name": "Machen",
+  "short_name": "Machen",
+  "description": "Ein ruhiger Ort für persönliche Aufgaben.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FAFBFD",
+  "theme_color": "#315ED3",
+  "lang": "de",
+  "icons": [{ "src": "machen-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
